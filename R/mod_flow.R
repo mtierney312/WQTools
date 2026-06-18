@@ -312,9 +312,9 @@ adjusted_data <- eventReactive(input$download_btn, {
       flow_data$flow_uploaded <- as.numeric(flow_data[[flow_col]])
 
       # Handle negative values if checkbox is checked
-      if(input$nonzero && any(flow_data$flow_uploaded < 0, na.rm = TRUE)) {
+      if(input$nonzero && any(flow_data$flow_uploaded <= 0, na.rm = TRUE)) {
         message('Non-Zero Rows Found-converting to 0.0001')
-        flow_data$flow_uploaded[flow_data$flow_uploaded < 0] <- 0.0001
+        flow_data$flow_uploaded[flow_data$flow_uploaded <= 0] <- 0.0001
       }
 
       # Select and format data
