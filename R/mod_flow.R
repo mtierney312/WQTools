@@ -238,18 +238,34 @@ mod_flow_server<- function(id, cleaned_storet_data = NULL) {
   req(input$flow_csv_upload)
   req(input$target_drainage_area)
 
-  tryCatch({
+tryCatch({
     # Read uploaded CSV
     flow_data <- read.csv(input$flow_csv_upload$datapath, stringsAsFactors = FALSE)
 
     # Standardize column names and parse dates
     if("time" %in% names(flow_data)) {
-      # Try multiple date formats
-      flow_data$date <- tryCatch({
-        as.Date(flow_data$time, format = "%m/%d/%Y")
-      }, error = function(e) {
-        as.Date(flow_data$time)
-      })
+      flow_data$date <- mdy(flow_data$time)  # Use lubridate::mdy
+    } else if("date" %in% names(flow_data)) {
+      flow_data$date <- mdy(flow_data$date)  # Use lubridate::mdy
+    } else {
+      showNotification("CSV must contain 'date' or 'time' column", type = "error")
+      return(NULL)
+    }
+
+    # Check if date parsing succeeded
+    if(all(is.na(flow_data$date))) {
+      showNotification("Could not parse dates. Please check date format (should be M/D/YYYY or MM/DD/YYYY)", type = "error")
+      return(NULL)
+    }
+    
+    # Continue with the rest of your flow data processing...
+    # (the code that handles flow_cfs column, negative values, etc.)
+    
+}, error = function(e) {
+    message("Error reading flow CSV: ", e$message)
+    showNotification(paste("Error reading flow CSV:", e$message), type = "error", duration = 10)
+    return(NULL)
+})
     } else if("date" %in% names(flow_data)) {
       # Try multiple date formats
       flow_data$date <- tryCatch({
