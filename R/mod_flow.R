@@ -234,66 +234,88 @@ mod_flow_server<- function(id, cleaned_storet_data = NULL) {
     adjusted_data <- eventReactive(input$download_btn, {
 
       # Handle uploaded flow data
-      if(input$flow_data_source == 'upload_flow') {
-        req(input$flow_csv_upload)
-        req(input$target_drainage_area)
+     if(input$flow_data_source == 'upload_flow') {
+  req(input$flow_csv_upload)
+  req(input$target_drainage_area)
 
-        tryCatch({
-          # Read uploaded CSV
-          flow_data <- read.csv(input$flow_csv_upload$datapath)
+  tryCatch({
+    # Read uploaded CSV
+    flow_data <- read.csv(input$flow_csv_upload$datapath, stringsAsFactors = FALSE)
 
-          # Expected columns: date/time and value/flow_cfs
-          # Standardize column names
-          if("time" %in% names(flow_data)) {
-            flow_data$date <- as.Date(flow_data$time)
-          } else if("date" %in% names(flow_data)) {
-            flow_data$date <- as.Date(flow_data$date)
-          } else {
-            showNotification("CSV must contain 'date' or 'time' column", type = "error")
-            return(NULL)
-          }
+    # Standardize column names and parse dates
+    if("time" %in% names(flow_data)) {
+      # Try multiple date formats
+      flow_data$date <- tryCatch({
+        as.Date(flow_data$time, format = "%m/%d/%Y")
+      }, error = function(e) {
+        as.Date(flow_data$time)
+      })
+    } else if("date" %in% names(flow_data)) {
+      # Try multiple date formats
+      flow_data$date <- tryCatch({
+        # First try M/D/YYYY format (from downloaded data)
+        parsed <- as.Date(flow_data$date, format = "%m/%d/%Y")
+        # If that results in NAs, try default parsing
+        if(all(is.na(parsed))) {
+          parsed <- as.Date(flow_data$date)
+        }
+        parsed
+      }, error = function(e) {
+        as.Date(flow_data$date)
+      })
+    } else {
+      showNotification("CSV must contain 'date' or 'time' column", type = "error")
+      return(NULL)
+    }
+    
+    # Check if date parsing succeeded
+    if(all(is.na(flow_data$date))) {
+      showNotification("Could not parse dates. Please ensure dates are in M/D/YYYY or YYYY-MM-DD format", type = "error")
+      return(NULL)
+    }
 
-          if("value" %in% names(flow_data)) {
-            flow_data$flow_uploaded <- as.numeric(flow_data$value)
-          } else if("flow_cfs" %in% names(flow_data)) {
-            flow_data$flow_uploaded <- as.numeric(flow_data$flow)
-          } else {
-            showNotification("CSV must contain 'value' or 'flow_cfs' column", type = "error")
-            return(NULL)
-          }
+    if("value" %in% names(flow_data)) {
+      flow_data$flow_uploaded <- as.numeric(flow_data$value)
+    } else if("flow_cfs" %in% names(flow_data)) {
+      flow_data$flow_uploaded <- as.numeric(flow_data$flow_cfs)
+    } else {
+      showNotification("CSV must contain 'value' or 'flow_cfs' column", type = "error")
+      return(NULL)
+    }
 
-          # Handle negative values if checkbox is checked (use the nonzero checkbox from USGS section)
-          if(exists("input$nonzero") && !is.null(input$nonzero) && input$nonzero && any(flow_data$flow_uploaded < 0, na.rm = TRUE)) {
-            message('Non-Zero Rows Found-converting to 0.0001')
-            flow_data$flow_uploaded[flow_data$flow_uploaded < 0] <- 0.0001
-          }
+    # Handle negative values if checkbox is checked
+    if(exists("input$nonzero") && !is.null(input$nonzero) && input$nonzero && any(flow_data$flow_uploaded < 0, na.rm = TRUE)) {
+      message('Non-Zero Rows Found-converting to 0.0001')
+      flow_data$flow_uploaded[flow_data$flow_uploaded < 0] <- 0.0001
+    }
 
-          # Select and format data
-          result <- flow_data %>%
-            select(date, flow_uploaded) %>%
-            filter(!is.na(flow_uploaded))
+    # Select and format data
+    result <- flow_data %>%
+      select(date, flow_uploaded) %>%
+      filter(!is.na(flow_uploaded), !is.na(date))
 
-          message("Uploaded flow data has ", nrow(result), " rows")
+    message("Uploaded flow data has ", nrow(result), " rows")
+    message("Date range: ", min(result$date), " to ", max(result$date))
 
-          # Add drainage info as attribute
-          attr(result, "drainage_info") <- data.frame(
-            Gage_ID = "Uploaded",
-            Gage_DA_sqmi = input$target_drainage_area,
-            Target_DA_sqmi = input$target_drainage_area,
-            DA_Ratio = 1.0
-          )
+    # Add drainage info as attribute
+    attr(result, "drainage_info") <- data.frame(
+      Gage_ID = "Uploaded",
+      Gage_DA_sqmi = input$target_drainage_area,
+      Target_DA_sqmi = input$target_drainage_area,
+      DA_Ratio = 1.0
+    )
 
-          attr(result, "gage_list") <- c("uploaded")
+    attr(result, "gage_list") <- c("uploaded")
 
-          showNotification("Flow data uploaded successfully", type = "message")
-          return(result)
+    showNotification("Flow data uploaded successfully", type = "message")
+    return(result)
 
-        }, error = function(e) {
-          message("Error reading flow CSV: ", e$message)
-          showNotification(paste("Error reading flow CSV:", e$message), type = "error", duration = 10)
-          return(NULL)
-        })
-      }
+  }, error = function(e) {
+    message("Error reading flow CSV: ", e$message)
+    showNotification(paste("Error reading flow CSV:", e$message), type = "error", duration = 10)
+    return(NULL)
+  })
+}
 
       # Original USGS download code
       req(gage_list(), input$target_drainage_area)
