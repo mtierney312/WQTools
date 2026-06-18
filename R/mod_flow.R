@@ -247,7 +247,7 @@ mod_flow_server<- function(id, cleaned_storet_data = NULL) {
           if("time" %in% names(flow_data)) {
             flow_data$date <- as.Date(flow_data$time)
           } else if("date" %in% names(flow_data)) {
-            flow_data$date <- as.Date(flow_data$date,format='%m/%d/%Y')
+            flow_data$date <- as.Date(flow_data$date)
           } else {
             showNotification("CSV must contain 'date' or 'time' column", type = "error")
             return(NULL)
