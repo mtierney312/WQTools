@@ -231,7 +231,7 @@ mod_flow_server <- function(id, cleaned_storet_data = NULL) {
     })
 
     # Download and adjust USGS gage data
-    adjusted_data <- eventReactive(input$download_btn, {
+adjusted_data <- eventReactive(input$download_btn, {
   # Handle uploaded flow data
   if(input$flow_data_source == 'upload_flow') {
     req(input$flow_csv_upload)
@@ -344,7 +344,7 @@ mod_flow_server <- function(id, cleaned_storet_data = NULL) {
       return(NULL)
     })
   } else {
-    # Original USGS download code
+    # USGS download code
     req(gage_list(), input$target_drainage_area)
 
     gages <- gage_list()
@@ -458,113 +458,6 @@ mod_flow_server <- function(id, cleaned_storet_data = NULL) {
     })
   }
 })
-
-
-        target_da <- input$target_drainage_area
-        time_interval <- paste0(
-          as.character(input$date_range[1]),
-          "/",
-          as.character(input$date_range[2])
-        )
-
-        message("Time interval: ", time_interval)
-        message("Target DA: ", target_da)
-
-        tryCatch({
-          # Download and adjust all gages
-          results <- lapply(gages, function(gage_id) {
-            message("Processing gage: ", gage_id)
-
-            gage_da <- input[[paste0("da_", gage_id)]]
-            message("Gage DA: ", gage_da)
-
-            if(is.null(gage_da) || gage_da == 0) {
-              message("Gage DA is NULL or 0, skipping")
-              return(NULL)
-            }
-
-            message("Downloading data for gage: ", gage_id)
-
-            # Download using correct parameter names
-            data <- read_waterdata_daily(
-              monitoring_location_id = paste0('USGS-', as.character(gage_id)),
-              parameter_code = "00060",
-              statistic_id = "00003",
-              time = time_interval
-            )
-
-            message("Downloaded ", nrow(data), " rows for gage ", gage_id)
-            message("Column names: ", paste(names(data), collapse = ", "))
-
-            if(is.null(data) || nrow(data) == 0) {
-              message("No data returned for gage: ", gage_id)
-              return(NULL)
-            }
-
-            # Drop geometry if present
-            if(inherits(data, "sf")) {
-              message("Dropping geometry")
-              data <- st_drop_geometry(data)
-            }
-
-            if(input$nonzero && any(data$value < 0, na.rm = TRUE)) {
-              message('Non-Zero Rows Found-converting to 0.0001')
-              data$value[data$value < 0] <- 0.0001
-            }
-
-            da_ratio <- target_da / gage_da
-            flow_col <- paste0("flow_", gsub("[^0-9]", "", gage_id))
-
-            message("Creating adjusted data with column: ", flow_col)
-
-            list(
-              data = data %>%
-                mutate(
-                  date = as.Date(time),
-                  !!flow_col := as.numeric(value) * da_ratio
-                ) %>%
-                select(date, !!flow_col),
-              info = data.frame(
-                Gage_ID = gage_id,
-                Gage_DA_sqmi = gage_da,
-                Target_DA_sqmi = target_da,
-                DA_Ratio = round(da_ratio, 4)
-              )
-            )
-          })
-
-          message("Number of results: ", length(results))
-          message("NULL results: ", sum(sapply(results, is.null)))
-
-          # Remove NULL results
-          results <- results[!sapply(results, is.null)]
-
-          if(length(results) == 0) {
-            showNotification("No valid gage data downloaded", type = "error")
-            return(NULL)
-          }
-
-          # Merge all data
-          merged <- Reduce(
-            function(x, y) merge(x, y, by = "date", all = TRUE),
-            lapply(results, `[[`, "data")
-          )
-
-          message("Merged data has ", nrow(merged), " rows")
-
-          attr(merged, "drainage_info") <- do.call(rbind, lapply(results, `[[`, "info"))
-          attr(merged, "gage_list") <- gages
-
-          showNotification(sprintf("Downloaded %d gage(s)", length(results)), type = "message")
-          merged
-
-        }, error = function(e) {
-          message("Error occurred: ", e$message)
-          showNotification(paste("Error:", e$message), type = "error", duration = 10)
-          NULL
-        })
-      }
-    })
     #End of Reactive
 
 
