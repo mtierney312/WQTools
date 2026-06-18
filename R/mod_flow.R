@@ -232,82 +232,233 @@ mod_flow_server <- function(id, cleaned_storet_data = NULL) {
 
     # Download and adjust USGS gage data
     adjusted_data <- eventReactive(input$download_btn, {
-      # Handle uploaded flow data
-      if(input$flow_data_source == 'upload_flow') {
-        req(input$flow_csv_upload)
-        req(input$target_drainage_area)
+  # Handle uploaded flow data
+  if(input$flow_data_source == 'upload_flow') {
+    req(input$flow_csv_upload)
+    req(input$target_drainage_area)
 
-        tryCatch({
-          # Read uploaded CSV
-          flow_data <- read.csv(input$flow_csv_upload$datapath, stringsAsFactors = FALSE)
+    tryCatch({
+      # Read uploaded CSV
+      flow_data <- read.csv(input$flow_csv_upload$datapath, stringsAsFactors = FALSE)
 
-          # Standardize column names and parse dates
-          if("time" %in% names(flow_data)) {
-            flow_data$date <- mdy(flow_data$time)  # Use lubridate::mdy
-          } else if("date" %in% names(flow_data)) {
-            flow_data$date <- mdy(flow_data$date)  # Use lubridate::mdy
-          } else {
-            showNotification("CSV must contain 'date' or 'time' column", type = "error")
-            return(NULL)
-          }
+      # Standardize column names and parse dates
+      # Try to find date column regardless of name
+      date_col <- NULL
+      if("time" %in% names(flow_data)) {
+        date_col <- "time"
+      } else if("date" %in% names(flow_data)) {
+        date_col <- "date"
+      } else if("Date" %in% names(flow_data)) {
+        date_col <- "Date"
+      }
+      
+      if(is.null(date_col)) {
+        showNotification("CSV must contain 'date', 'Date', or 'time' column", type = "error")
+        return(NULL)
+      }
+      
+      # Parse dates with multiple format attempts
+      flow_data$date <- tryCatch({
+        # Get the date column values
+        date_values <- flow_data[[date_col]]
+        
+        # Try different parsing methods
+        # First try: lubridate mdy (M/D/YYYY or MM/DD/YYYY)
+        parsed <- mdy(date_values, quiet = TRUE)
+        
+        # If that didn't work, try ymd (YYYY-MM-DD)
+        if(all(is.na(parsed))) {
+          parsed <- ymd(date_values, quiet = TRUE)
+        }
+        
+        # If still not working, try as.Date with format parameter
+        if(all(is.na(parsed))) {
+          parsed <- as.Date(date_values, format = "%m/%d/%Y")
+        }
+        
+        # Last resort: try default as.Date
+        if(all(is.na(parsed))) {
+          parsed <- as.Date(date_values)
+        }
+        
+        parsed
+      }, error = function(e) {
+        return(rep(NA, nrow(flow_data)))
+      })
+      
+      # Check if date parsing succeeded
+      if(all(is.na(flow_data$date))) {
+        showNotification("Could not parse dates. Please ensure dates are in M/D/YYYY, MM/DD/YYYY, or YYYY-MM-DD format", type = "error")
+        return(NULL)
+      }
 
-          # Check if date parsing succeeded
-          if(all(is.na(flow_data$date))) {
-            showNotification("Could not parse dates. Please check date format (should be M/D/YYYY or MM/DD/YYYY)", type = "error")
-            return(NULL)
-          }
+      # Handle flow value column - try multiple possible names
+      flow_col <- NULL
+      if("value" %in% names(flow_data)) {
+        flow_col <- "value"
+      } else if("flow_cfs" %in% names(flow_data)) {
+        flow_col <- "flow_cfs"
+      } else if("Value" %in% names(flow_data)) {
+        flow_col <- "Value"
+      } else if("flow" %in% names(flow_data)) {
+        flow_col <- "flow"
+      }
+      
+      if(is.null(flow_col)) {
+        showNotification("CSV must contain 'value', 'flow_cfs', or 'flow' column", type = "error")
+        return(NULL)
+      }
+      
+      flow_data$flow_uploaded <- as.numeric(flow_data[[flow_col]])
 
-          # Handle flow value column
-          if("value" %in% names(flow_data)) {
-            flow_data$flow_uploaded <- as.numeric(flow_data$value)
-          } else if("flow_cfs" %in% names(flow_data)) {
-            flow_data$flow_uploaded <- as.numeric(flow_data$flow_cfs)
-          } else {
-            showNotification("CSV must contain 'value' or 'flow_cfs' column", type = "error")
-            return(NULL)
-          }
+      # Handle negative values if checkbox is checked
+      if(input$nonzero && any(flow_data$flow_uploaded < 0, na.rm = TRUE)) {
+        message('Non-Zero Rows Found-converting to 0.0001')
+        flow_data$flow_uploaded[flow_data$flow_uploaded < 0] <- 0.0001
+      }
 
-          # Handle negative values if checkbox is checked
-          if(input$nonzero && any(flow_data$flow_uploaded < 0, na.rm = TRUE)) {
-            message('Non-Zero Rows Found-converting to 0.0001')
-            flow_data$flow_uploaded[flow_data$flow_uploaded < 0] <- 0.0001
-          }
+      # Select and format data
+      result <- flow_data %>%
+        select(date, flow_uploaded) %>%
+        filter(!is.na(flow_uploaded), !is.na(date))
 
-          # Select and format data
-          result <- flow_data %>%
-            select(date, flow_uploaded) %>%
-            filter(!is.na(flow_uploaded), !is.na(date))
+      message("Uploaded flow data has ", nrow(result), " rows")
+      message("Date range: ", min(result$date), " to ", max(result$date))
 
-          message("Uploaded flow data has ", nrow(result), " rows")
-          message("Date range: ", min(result$date), " to ", max(result$date))
+      # Add drainage info as attribute
+      attr(result, "drainage_info") <- data.frame(
+        Gage_ID = "Uploaded",
+        Gage_DA_sqmi = input$target_drainage_area,
+        Target_DA_sqmi = input$target_drainage_area,
+        DA_Ratio = 1.0
+      )
 
-          # Add drainage info as attribute
-          attr(result, "drainage_info") <- data.frame(
-            Gage_ID = "Uploaded",
-            Gage_DA_sqmi = input$target_drainage_area,
-            Target_DA_sqmi = input$target_drainage_area,
-            DA_Ratio = 1.0
-          )
+      attr(result, "gage_list") <- c("uploaded")
 
-          attr(result, "gage_list") <- c("uploaded")
+      showNotification("Flow data uploaded successfully", type = "message")
+      return(result)
 
-          showNotification("Flow data uploaded successfully", type = "message")
-          return(result)
+    }, error = function(e) {
+      message("Error reading flow CSV: ", e$message)
+      showNotification(paste("Error reading flow CSV:", e$message), type = "error", duration = 10)
+      return(NULL)
+    })
+  } else {
+    # Original USGS download code
+    req(gage_list(), input$target_drainage_area)
 
-        }, error = function(e) {
-          message("Error reading flow CSV: ", e$message)
-          showNotification(paste("Error reading flow CSV:", e$message), type = "error", duration = 10)
-          return(NULL)
-        })
-      } else {
-        # Original USGS download code
-        req(gage_list(), input$target_drainage_area)
+    gages <- gage_list()
+    if(length(gages) == 0) {
+      showNotification("Please enter at least one gage ID", type = "error")
+      return(NULL)
+    }
 
-        gages<- gage_list()
-        if(length(gages) == 0) {
-          showNotification("Please enter at least one gage ID", type = "error")
+    target_da <- input$target_drainage_area
+    time_interval <- paste0(
+      as.character(input$date_range[1]),
+      "/",
+      as.character(input$date_range[2])
+    )
+
+    message("Time interval: ", time_interval)
+    message("Target DA: ", target_da)
+
+    tryCatch({
+      # Download and adjust all gages
+      results <- lapply(gages, function(gage_id) {
+        message("Processing gage: ", gage_id)
+
+        gage_da <- input[[paste0("da_", gage_id)]]
+        message("Gage DA: ", gage_da)
+
+        if(is.null(gage_da) || gage_da == 0) {
+          message("Gage DA is NULL or 0, skipping")
           return(NULL)
         }
+
+        message("Downloading data for gage: ", gage_id)
+
+        # Download using correct parameter names
+        data <- read_waterdata_daily(
+          monitoring_location_id = paste0('USGS-', as.character(gage_id)),
+          parameter_code = "00060",
+          statistic_id = "00003",
+          time = time_interval
+        )
+
+        message("Downloaded ", nrow(data), " rows for gage ", gage_id)
+        message("Column names: ", paste(names(data), collapse = ", "))
+
+        if(is.null(data) || nrow(data) == 0) {
+          message("No data returned for gage: ", gage_id)
+          return(NULL)
+        }
+
+        # Drop geometry if present
+        if(inherits(data, "sf")) {
+          message("Dropping geometry")
+          data <- st_drop_geometry(data)
+        }
+
+        if(input$nonzero && any(data$value < 0, na.rm = TRUE)) {
+          message('Non-Zero Rows Found-converting to 0.0001')
+          data$value[data$value < 0] <- 0.0001
+        }
+
+        da_ratio <- target_da / gage_da
+        flow_col <- paste0("flow_", gsub("[^0-9]", "", gage_id))
+
+        message("Creating adjusted data with column: ", flow_col)
+
+        list(
+          data = data %>%
+            mutate(
+              date = as.Date(time),
+              !!flow_col := as.numeric(value) * da_ratio
+            ) %>%
+            select(date, !!flow_col),
+          info = data.frame(
+            Gage_ID = gage_id,
+            Gage_DA_sqmi = gage_da,
+            Target_DA_sqmi = target_da,
+            DA_Ratio = round(da_ratio, 4)
+          )
+        )
+      })
+
+      message("Number of results: ", length(results))
+      message("NULL results: ", sum(sapply(results, is.null)))
+
+      # Remove NULL results
+      results <- results[!sapply(results, is.null)]
+
+      if(length(results) == 0) {
+        showNotification("No valid gage data downloaded", type = "error")
+        return(NULL)
+      }
+
+      # Merge all data
+      merged <- Reduce(
+        function(x, y) merge(x, y, by = "date", all = TRUE),
+        lapply(results, `[[`, "data")
+      )
+
+      message("Merged data has ", nrow(merged), " rows")
+
+      attr(merged, "drainage_info") <- do.call(rbind, lapply(results, `[[`, "info"))
+      attr(merged, "gage_list") <- gages
+
+      showNotification(sprintf("Downloaded %d gage(s)", length(results)), type = "message")
+      merged
+
+    }, error = function(e) {
+      message("Error occurred: ", e$message)
+      showNotification(paste("Error:", e$message), type = "error", duration = 10)
+      NULL
+    })
+  }
+})
+
 
         target_da <- input$target_drainage_area
         time_interval <- paste0(
