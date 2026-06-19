@@ -313,7 +313,7 @@ adjusted_data <- eventReactive(input$download_btn, {
 
       # Handle negative values if checkbox is checked
       if(input$nonzero && any(flow_data$flow_uploaded <= 0, na.rm = TRUE)) {
-        message('Non-Zero Rows Found-converting to 0.0001')
+        message('Negatives and Zeroes Found; Converting to 0.0001')
         flow_data$flow_uploaded[flow_data$flow_uploaded <= 0] <- 0.0001
       }
 
@@ -400,9 +400,9 @@ adjusted_data <- eventReactive(input$download_btn, {
           data <- st_drop_geometry(data)
         }
 
-        if(input$nonzero && any(data$value < 0, na.rm = TRUE)) {
-          message('Non-Zero Rows Found-converting to 0.0001')
-          data$value[data$value < 0] <- 0.0001
+        if(input$nonzero && any(data$value <= 0, na.rm = TRUE)) {
+          message('Negatives and zeroes found; converting to 0.0001')
+          data$value[data$value <= 0] <- 0.0001
         }
 
         da_ratio <- target_da / gage_da
