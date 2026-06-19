@@ -148,6 +148,17 @@ mod_flow_ui <- function(id) {
 mod_flow_server <- function(id, cleaned_storet_data = NULL) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
+    parse_dates <- function(x, name = "Date") {
+      formats <- c("%m/%d/%Y", "%Y-%m-%d", "%d/%m/%Y", "%m-%d-%Y", "%Y/%m/%d", "%d-%m-%Y")
+      result <- as.Date(rep(NA, length(x)))
+      for (fmt in formats) {
+        na_idx <- is.na(result)
+        result[na_idx] <- as.Date(x[na_idx], format = fmt)
+      }
+      failed <- sum(is.na(result) & !is.na(x))
+      if (failed > 0) warning(sprintf("%s: %d/%d dates failed", name, failed, length(x)))
+      result
+    }
 
     # Get E. coli data for date range extraction
     source_ecoli_data <- reactive({
@@ -162,7 +173,7 @@ mod_flow_server <- function(id, cleaned_storet_data = NULL) {
 
         # Ensure ActivityStartDate is properly formatted
         if("ActivityStartDate" %in% names(data)) {
-          data$ActivityStartDate <- as.Date(data$ActivityStartDate)
+          data$ActivityStartDate <- parse_dates(data$ActivityStartDate,"ActivityStartDate")
         }
 
         return(data)
