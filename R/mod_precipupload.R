@@ -56,6 +56,19 @@ mod_precipupload_server <- function(id, cleaned_storet_data = NULL){
   moduleServer(id, function(input, output, session){
     ns <- session$ns
 
+    # Define parse_dates function once at module level
+    parse_dates <- function(x, name = "Date") {
+      formats <- c("%m/%d/%Y", "%Y-%m-%d", "%d/%m/%Y", "%m-%d-%Y", "%Y/%m/%d", "%d-%m-%Y")
+      result <- as.Date(rep(NA, length(x)))
+      for (fmt in formats) {
+        na_idx <- is.na(result)
+        result[na_idx] <- as.Date(x[na_idx], format = fmt)
+      }
+      failed <- sum(is.na(result) & !is.na(x))
+      if (failed > 0) warning(sprintf("%s: %d/%d dates failed", name, failed, length(x)))
+      result
+    }
+
     # Get STORET data based on source selection
     source_storet_data <- reactive({
       if(input$storet_source == 'upload') {
@@ -91,7 +104,20 @@ mod_precipupload_server <- function(id, cleaned_storet_data = NULL){
         )
       }
 
-      df$ActivityStartDate <- as.Date(df$ActivityStartDate,format='%m/%d/%Y')
+      # Parse dates and store result
+      df$ActivityStartDate <- parse_dates(df$ActivityStartDate, "ActivityStartDate")
+      
+      # Check if any dates were successfully parsed
+      if(all(is.na(df$ActivityStartDate))) {
+        return(
+          div(
+            style = "padding: 10px; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px;",
+            icon("times-circle"),
+            " Failed to parse any dates from ActivityStartDate column."
+          )
+        )
+      }
+      
       min_date <- min(df$ActivityStartDate, na.rm = TRUE)
       max_date <- max(df$ActivityStartDate, na.rm = TRUE)
 
@@ -130,7 +156,7 @@ mod_precipupload_server <- function(id, cleaned_storet_data = NULL){
         }
 
         names(data)[names(data) == ppt_col[1]] <- "ppt"
-        data$Date <- as.Date(data$Date, format = "%m/%d/%Y")
+        data$Date <- parse_dates(data$Date, "PRISM Date")
         data <- data[!is.na(data$Date), ]
 
         if(nrow(data) == 0) {
@@ -170,7 +196,7 @@ mod_precipupload_server <- function(id, cleaned_storet_data = NULL){
       }
 
       prism <- prism_data()
-      storet$Date <- as.Date(storet$ActivityStartDate)
+      storet$Date <- parse_dates(storet$ActivityStartDate, "STORET ActivityStartDate")
 
       merged <- merge(storet, prism, by = "Date", all = FALSE)
 
@@ -204,7 +230,7 @@ mod_precipupload_server <- function(id, cleaned_storet_data = NULL){
       )
 
       # Filter to complete cases
-      merged <- merged %>% filter(!is.na(ecoli_value), !is.na(ppt))
+      merged <- merged %>% dplyr::filter(!is.na(ecoli_value), !is.na(ppt))
 
       if(nrow(merged) == 0) {
         showNotification("No complete cases after removing missing values", type = "warning")
@@ -220,7 +246,8 @@ mod_precipupload_server <- function(id, cleaned_storet_data = NULL){
       data <- merged_data()
       if(!is.null(data)) paste0("Matched records: ", nrow(data)) else ""
     })
-    plotInput<-function(){
+    
+    plotInput <- function(){
       req(merged_data())
       data <- merged_data()
 
@@ -241,18 +268,21 @@ mod_precipupload_server <- function(id, cleaned_storet_data = NULL){
       r_squared <- summary(lm_model)$r.squared
       legend("topleft",
              legend = c(sprintf("y = %.2fx + %.2f", coef(lm_model)[2], coef(lm_model)[1]),
-                        sprintf("R2 = %.3f", r_squared)),
+                        sprintf("R² = %.3f", r_squared)),
              bty = "n", text.col = "black", cex = 1.1)
     }
 
     output$correlation_plot <- renderPlot({
-      print(plotInput())})
+      plotInput()
+    })
 
-    output$downloadplot<-downloadHandler(filename=function(){
-      paste('precipplot',Sys.Date(),'.png')},
+    output$downloadplot <- downloadHandler(
+      filename = function(){
+        paste('precipplot', Sys.Date(), '.png', sep = '')
+      },
       content = function(file){
         png(file)
-        print(plotInput())
+        plotInput()
         dev.off()
       })
   })
