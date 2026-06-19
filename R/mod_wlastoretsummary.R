@@ -56,6 +56,17 @@ mod_wlastoretsummary_ui <- function(id) {
 mod_wlastoretsummary_server <- function(id,cleaned_storet_data=NULL){
   moduleServer(id, function(input, output, session){
     ns <- session$ns
+    parse_dates <- function(x, name = "Date") {
+      formats <- c("%m/%d/%Y", "%Y-%m-%d", "%d/%m/%Y", "%m-%d-%Y", "%Y/%m/%d", "%d-%m-%Y")
+      result <- as.Date(rep(NA, length(x)))
+      for (fmt in formats) {
+        na_idx <- is.na(result)
+        result[na_idx] <- as.Date(x[na_idx], format = fmt)
+      }
+      failed <- sum(is.na(result) & !is.na(x))
+      if (failed > 0) warning(sprintf("%s: %d/%d dates failed", name, failed, length(x)))
+      result
+    }
     source_data <- reactive({
       if(input$data_source == 'upload') {
         req(input$upload_file)
@@ -77,7 +88,7 @@ mod_wlastoretsummary_server <- function(id,cleaned_storet_data=NULL){
         return(NULL)
       }
 
-      df$ActivityStartDate <- as.Date(df$ActivityStartDate)
+      df$ActivityStartDate <- parse_dates(df$ActivityStartDate,"ActivityStartDate")
       df$Year <- as.numeric(format(df$ActivityStartDate, "%Y"))
 
       # Filter out NH3 data prior to 2001
