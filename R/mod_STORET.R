@@ -76,7 +76,7 @@ mod_STORET_server <- function(id){
         }
         return(x)
       }
-      format_siteid <- function(sites_input, org = "21SC60WQ_WQX") {
+      format_siteid <- function(sites_input, org = input$id) {
         # Handle NULL or empty input
         if (is.null(sites_input) || length(sites_input) == 0 || !nzchar(trimws(sites_input))) {
           return("null")
