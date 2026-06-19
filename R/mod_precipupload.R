@@ -91,7 +91,7 @@ mod_precipupload_server <- function(id, cleaned_storet_data = NULL){
         )
       }
 
-      df$ActivityStartDate <- as.Date(df$ActivityStartDate)
+      df$ActivityStartDate <- as.Date(df$ActivityStartDate,format='%m/%d/%Y')
       min_date <- min(df$ActivityStartDate, na.rm = TRUE)
       max_date <- max(df$ActivityStartDate, na.rm = TRUE)
 
