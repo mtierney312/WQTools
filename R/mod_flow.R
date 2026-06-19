@@ -165,7 +165,7 @@ mod_flow_server <- function(id, cleaned_storet_data = NULL) {
       if(input$flow_source == 'upload') {
         req(input$flow_upload_file)
         data <- read.csv(input$flow_upload_file$datapath)
-        data$ActivityStartDate <- as.Date(data$ActivityStartDate)
+        data$ActivityStartDate <- parse_dates(data$ActivityStartDate,"ActivtyStartDate")
         return(data)
       } else {
         req(cleaned_storet_data)
