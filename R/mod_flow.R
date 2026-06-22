@@ -26,17 +26,17 @@ mod_flow_ui <- function(id) {
       card_header("Flow Data and Load Duration Analysis"),
       layout_sidebar(
         sidebar = sidebar(
-          h4("Step 1: Get Date Range from E. coli Data"),
+          h4("Step 1: Get Date Range from STORET Data"),
           radioButtons(
             ns('flow_source'),
-            'E. coli Data Source',
+            'STORET Data Source',
             choices = c('Use Cleaned STORET' = 'cleaned', 'Upload File' = 'upload'),
             selected = 'cleaned'
           ),
           conditionalPanel(
             condition = "input.flow_source == 'upload'",
             ns = ns,
-            fileInput(ns('flow_upload_file'), 'Upload E. coli CSV File', accept = '.csv')
+            fileInput(ns('flow_upload_file'), 'Upload STORET CSV File', accept = '.csv')
           ),
           uiOutput(ns("date_range_message")),
 
@@ -64,7 +64,7 @@ mod_flow_ui <- function(id) {
               value = "",
               placeholder = "e.g., 02167705, 02167582, 02167450"
             ),
-            uiOutput(ns("drainage_area_inputs")),  # These are the GAGE drainage areas
+            uiOutput(ns("drainage_area_inputs")),  # These are the Gage drainage areas
             dateRangeInput(
               ns("date_range"),
               "Select Date Range:",
@@ -192,7 +192,7 @@ mod_flow_server <- function(id, cleaned_storet_data = NULL) {
           div(
             style = "padding: 10px; background-color: #d1ecf1; border: 1px solid #bee5eb; border-radius: 4px;",
             icon("info-circle"),
-            " Please provide E. coli data first."
+            " Please provide STORET data first."
           )
         )
       }
@@ -214,7 +214,7 @@ mod_flow_server <- function(id, cleaned_storet_data = NULL) {
         style = "padding: 10px; background-color: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px;",
         icon("check-circle"),
         p(
-          strong("Suggested date range based on E. coli data:"),
+          strong("Suggested date range based on STORET data:"),
           br(),
           sprintf("From: %s", format(min_date, "%Y-%m-%d")),
           br(),
@@ -928,7 +928,7 @@ adjusted_data <- eventReactive(input$download_btn, {
         p(
           strong("Matching Statistics:"),
           br(),
-          sprintf("E. coli records matched to flow: %d of %d (%.1f%%)",
+          sprintf("STORET records matched to flow: %d of %d (%.1f%%)",
                   ecoli_matched,
                   ecoli_total,
                   (ecoli_matched/ecoli_total)*100)
