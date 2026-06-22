@@ -108,6 +108,9 @@ mod_flow_ui <- function(id) {
             min = 0,
             max = 100
           ),
+          numericInput(ns("conv_fact"),"Conversion Factor:",
+                       value=24465758.4,
+                       min=0),
           input_task_button(
             ns("calculate_load_btn"),
             "Calculate Load Duration"
@@ -653,7 +656,7 @@ adjusted_data <- eventReactive(input$download_btn, {
 
       # Apply margin of safety to target
       WQ_TARGET <- input$wq_target * (1 - (input$mos_percent / 100))
-      CONV_FACTOR <- 24465758.4  # Conversion factor for loads
+      CONV_FACTOR <- input$conv_fact  # Conversion factor for loads
 
       # Match E. coli to flow data
       ecoli_with_flow <- ecoli_data %>%
