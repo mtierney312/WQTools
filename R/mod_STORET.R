@@ -22,7 +22,7 @@ mod_STORET_ui <- function(id) {
           layout_sidebar(
             sidebar=sidebar(
               textInput(ns('huc'),'HUC',value='0',updateOn = 'blur'),
-              dateRangeInput(ns('date'),"Date Range",start = '2022-01-01',end = '2022-06-01',min='1950-01-01',
+              dateRangeInput(ns('date'),"Date Range",start = Sys.Date()-365,end = Sys.Date(),min='1950-01-01',
                        max=Sys.Date()),
               textInput(ns('id'),'Organization ID',value='21SC60WQ_WQX',updateOn='blur'),
               textAreaInput(ns('site'),'Site Name(s)',value='S-855',updateOn='blur'),
