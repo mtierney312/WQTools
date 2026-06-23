@@ -141,7 +141,7 @@ mod_flow_ui <- function(id) {
         )
       )
     )
-  )
+  ))
 }
 
 #' flow Server Functions
