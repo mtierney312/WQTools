@@ -21,7 +21,7 @@ mod_STORET_ui <- function(id) {
           card_header('STORET Data Download'),
           layout_sidebar(
             sidebar=sidebar(
-              textInput(ns('huc'),'HUC',placeholder='010203040506',updateOn = 'blur'),
+              textInput(ns('huc'),'HUC',value="",placeholder='010203040506',updateOn = 'blur'),
               dateRangeInput(ns('date'),"Date Range",start = Sys.Date()-365,end = Sys.Date(),min='1950-01-01',
                        max=Sys.Date()),
               textInput(ns('id'),'Organization ID',value='21SC60WQ_WQX',updateOn='blur'),
