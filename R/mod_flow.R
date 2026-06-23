@@ -24,7 +24,11 @@ mod_flow_ui <- function(id) {
   page_fluid(
     card(
       card_header("Flow Data and Load Duration Analysis"),
-          h4("Step 1: Get Date Range from STORET Data"),
+      layout_columns(
+        col_widths = c(4, 4, 4),
+        # Step 1
+        card(
+          card_header("Step 1: Get Date Range from STORET Data"),
           radioButtons(
             ns('flow_source'),
             'STORET Data Source',
@@ -36,14 +40,15 @@ mod_flow_ui <- function(id) {
             ns = ns,
             fileInput(ns('flow_upload_file'), 'Upload STORET CSV File', accept = '.csv')
           ),
-          uiOutput(ns("date_range_message")),
-
-          hr(),
-          h4("Step 2: Download Flow Data"),
+          uiOutput(ns("date_range_message"))
+        ),
+        # Step 2
+        card(
+          card_header("Step 2: Download Flow Data"),
           numericInput(
             ns("target_drainage_area"),
             "Target Location Drainage Area (sq mi):",
-            value=0,
+            value = 0,
             min = 0
           ),
           radioButtons(
@@ -61,7 +66,7 @@ mod_flow_ui <- function(id) {
               value = "",
               placeholder = "e.g., 02167705, 02167582, 02167450"
             ),
-            uiOutput(ns("drainage_area_inputs")),  # These are the Gage drainage areas
+            uiOutput(ns("drainage_area_inputs")),
             dateRangeInput(
               ns("date_range"),
               "Select Date Range:",
@@ -87,10 +92,11 @@ mod_flow_ui <- function(id) {
             condition = "input.flow_data_source == 'usgs'",
             ns = ns,
             downloadButton(ns('download_flow_csv'), 'Download Flow Data CSV')
-          ),
-
-          hr(),
-          h4("Step 3: Select Gage for Load Analysis"),
+          )
+        ),
+        # Step 3
+        card(
+          card_header("Step 3: Select Gage for Load Analysis"),
           uiOutput(ns('DMR_inputs')),
           uiOutput(ns("gage_selector")),
           numericInput(
@@ -106,43 +112,48 @@ mod_flow_ui <- function(id) {
             min = 0,
             max = 100
           ),
-          numericInput(ns("conv_fact"),"Conversion Factor:",
-                       value=24465758.4,
-                       min=0),
+          numericInput(
+            ns("conv_fact"),
+            "Conversion Factor:",
+            value = 24465758.4,
+            min = 0
+          ),
           input_task_button(
             ns("calculate_load_btn"),
             "Calculate Load Duration"
           ),
-          downloadButton(ns('download_plots'), 'Download Plots'),
-        card(
-          card_header('Plots'),
-          navset_card_tab(
-          nav_panel(
-            "Flow Comparison",
-            plotly::plotlyOutput(ns("timeseries_plot"), height = "600px")
-          ),
-          nav_panel(
-            "Drainage Adjustments",
-            tableOutput(ns("drainage_adjustments_table"))
-          ),
-          nav_panel(
-            "Flow Duration Curve",
-            plotOutput(ns("duration_plot"), height = "600px")
-          ),
-          nav_panel(
-            "Load Duration Curve",
-            plotOutput(ns("load_duration_plot"), height = "600px"),
-            uiOutput(ns('match_statistics'))
-          ),
-          nav_panel(
-            "Load Reduction Summary",
-            tableOutput(ns("load_reduction_table"))
+          downloadButton(ns('download_plots'), 'Download Plots')
+        )
+      )
+    ),
+    card(
+      card_header('Plots'),
+      navset_card_tab(
+        nav_panel(
+          "Flow Comparison",
+          plotly::plotlyOutput(ns("timeseries_plot"), height = "600px")
+        ),
+        nav_panel(
+          "Drainage Adjustments",
+          tableOutput(ns("drainage_adjustments_table"))
+        ),
+        nav_panel(
+          "Flow Duration Curve",
+          plotOutput(ns("duration_plot"), height = "600px")
+        ),
+        nav_panel(
+          "Load Duration Curve",
+          plotOutput(ns("load_duration_plot"), height = "600px"),
+          uiOutput(ns('match_statistics'))
+        ),
+        nav_panel(
+          "Load Reduction Summary",
+          tableOutput(ns("load_reduction_table"))
         )
       )
     )
-  ))
+  )
 }
-
 #' flow Server Functions
 #'
 #' @noRd
