@@ -730,7 +730,8 @@ adjusted_data <- eventReactive(input$download_btn, {
           pct_reduction = round((existing_load - target_load) / existing_load * 100, 1),
           pct_reduction = ifelse(pct_reduction < 0, 0, pct_reduction),
           meets_standard = ifelse(pct_reduction == 0, "No Reduction Needed",
-                                  paste0(pct_reduction, "%"))
+                                  paste0(pct_reduction, "%")),
+          MOS=mid_flow_cfs*CONV_FACTOR*(1 - (input$mos_percent / 100)),
         ) %>%
         select(hydro_cat, exceed_p, mid_flow_cfs, p90_conc,
                existing_load, target_load, load_reduction, pct_reduction, meets_standard)
@@ -893,6 +894,7 @@ adjusted_data <- eventReactive(input$download_btn, {
           mid_flow_cfs = round(mid_flow_cfs, 2),
           p90_conc = round(p90_conc, 1),
           existing_load = scales::scientific(existing_load, digits = 3),
+          marginsafety=scales::scientific(MOS,digits=3),
           target_load = scales::scientific(target_load, digits = 3),
           load_reduction = scales::scientific(load_reduction, digits = 3)
         ) %>%
@@ -903,6 +905,7 @@ adjusted_data <- eventReactive(input$download_btn, {
           `Midpoint Flow (cfs)` = mid_flow_cfs,
           `90th %ile E. coli` = p90_conc,
           `Existing Load (#/day)` = existing_load,
+          'Margin of Safety (#/day)'=marginsafety,
           `Target Load (#/day)` = target_load,
           `Load Reduction (#/day)` = load_reduction,
           `% Reduction Needed` = pct_reduction,
