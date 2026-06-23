@@ -237,7 +237,7 @@ mod_flow_server <- function(id, cleaned_storet_data = NULL) {
         numericInput(
           ns(paste0("da_", gage_id)),
           paste("Gage", gage_id, "Drainage Area (sq mi):"),
-          value = 50, #Change this to suggest instead#############################################################
+          suggest = 50,
           min = 0
         )
       })
