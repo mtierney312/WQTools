@@ -94,6 +94,7 @@ mod_flow_ui <- function(id) {
 
           hr(),
           h4("Step 3: Select Gage for Load Analysis"),
+          uiOutput(ns('DMR_inputs')),
           uiOutput(ns("gage_selector")),
           numericInput(
             ns("wq_target"),
@@ -238,13 +239,28 @@ mod_flow_server <- function(id, cleaned_storet_data = NULL) {
         numericInput(
           ns(paste0("da_", gage_id)),
           paste("Gage", gage_id, "Drainage Area (sq mi):"),
-          value = 50,
+          value = 50, #Change this to suggest instead#############################################################
           min = 0
         )
       })
     })
+    output$DMR_inputs <- renderUI({
+  gages <- gage_list()
+  if(length(gages) == 0) return(NULL)
+  
+  tagList(
+    h5("Upload DMR Files (Optional):"),
+    lapply(gages, function(gage_id) {
+      fileInput(
+        ns(paste0("dmr_", gage_id)),
+        paste("DMR for Gage", gage_id, ":"),
+        accept = '.csv'
+      )
+    })
+  )
+})
 
-    # Download and adjust USGS gage data
+    # Download and adjust USGS gage data#################################################################################
 adjusted_data <- eventReactive(input$download_btn, {
   # Handle uploaded flow data
   if(input$flow_data_source == 'upload_flow') {
@@ -271,38 +287,12 @@ adjusted_data <- eventReactive(input$download_btn, {
         return(NULL)
       }
       
-      # Parse dates with multiple format attempts
-      flow_data$date <- tryCatch({
-        # Get the date column values
-        date_values <- flow_data[[date_col]]
-        
-        # Try different parsing methods
-        # First try: lubridate mdy (M/D/YYYY or MM/DD/YYYY)
-        parsed <- mdy(date_values, quiet = TRUE)
-        
-        # If that didn't work, try ymd (YYYY-MM-DD)
-        if(all(is.na(parsed))) {
-          parsed <- ymd(date_values, quiet = TRUE)
-        }
-        
-        # If still not working, try as.Date with format parameter
-        if(all(is.na(parsed))) {
-          parsed <- as.Date(date_values, format = "%m/%d/%Y")
-        }
-        
-        # Last resort: try default as.Date
-        if(all(is.na(parsed))) {
-          parsed <- as.Date(date_values)
-        }
-        
-        parsed
-      }, error = function(e) {
-        return(rep(NA, nrow(flow_data)))
-      })
+      # Parse dates using parse_dates function for consistency
+      flow_data$date <- parse_dates(flow_data[[date_col]], "Flow Data Date")
       
       # Check if date parsing succeeded
       if(all(is.na(flow_data$date))) {
-        showNotification("Could not parse dates. Please ensure dates are in M/D/YYYY, MM/DD/YYYY, or YYYY-MM-DD format", type = "error")
+        showNotification("Could not parse dates. Please ensure dates are in a valid format", type = "error")
         return(NULL)
       }
 
@@ -332,9 +322,8 @@ adjusted_data <- eventReactive(input$download_btn, {
       }
 
       # Select and format data
-      result <- flow_data %>%
-        select(date, flow_uploaded) %>%
-        filter(!is.na(flow_uploaded), !is.na(date))
+      result <- flow_data[!is.na(flow_data$flow_uploaded) & !is.na(flow_data$date), 
+                          c("date", "flow_uploaded")]
 
       message("Uploaded flow data has ", nrow(result), " rows")
       message("Date range: ", min(result$date), " to ", max(result$date))
@@ -450,6 +439,91 @@ adjusted_data <- eventReactive(input$download_btn, {
         showNotification("No valid gage data downloaded", type = "error")
         return(NULL)
       }
+      
+      # Process DMR files for each gage if uploaded
+results <- lapply(seq_along(results), function(i) {
+  res <- results[[i]]
+  if(is.null(res)) return(NULL)
+  
+  gage_id <- gages[i]
+  dmr_input <- input[[paste0("dmr_", gage_id)]]
+  
+  # Check if DMR file was uploaded for this gage
+  if(!is.null(dmr_input)) {
+    tryCatch({
+      dmr_data <- read.csv(dmr_input$datapath, stringsAsFactors = FALSE)
+      
+      # Validate that LOAD_1_DMR column exists
+      if(!"LOAD_1_DMR" %in% names(dmr_data)) {
+        showNotification(
+          paste("DMR file for gage", gage_id, "must contain 'LOAD_1_DMR' column"), 
+          type = "warning"
+        )
+        return(res)
+      }
+      if(!("Report Start Date" %in% names(dmr_data)) || !("Report End Date" %in% names(dmr_data))) {
+        showNotification(
+          paste("DMR file for gage", gage_id, "must contain 'Report Start Date' and 'Report End Date' columns"), 
+          type = "warning"
+        )
+        return(res)
+      }
+      
+      # Parse dates
+      dmr_data$start_date <- parse_dates(dmr_data[["Report Start Date"]], paste("DMR Start Date for", gage_id))
+      dmr_data$end_date <- parse_dates(dmr_data[["Report End Date"]], paste("DMR End Date for", gage_id))
+      
+      # Calculate days in period and daily DMR constant
+      dmr_data$days_in_period <- as.numeric(difftime(dmr_data$end_date, dmr_data$start_date, units = "days")) + 1
+      dmr_data$daily_dmr <- dmr_data$LOAD_1_DMR / dmr_data$days_in_period
+      
+      # Create year-month identifier
+      dmr_data$year_month <- format(dmr_data$start_date, "%Y-%m")
+      
+      # Add year_month column to flow data
+      res$data$year_month <- format(res$data$date, "%Y-%m")
+      
+      # Merge with DMR data
+      res$data <- merge(
+        res$data,
+        dmr_data[, c("year_month", "daily_dmr")],
+        by = "year_month",
+        all.x = TRUE
+      )
+      
+      # Get the flow column name (should already be drainage-area adjusted)
+      flow_cols <- grep("^flow_", names(res$data), value = TRUE)
+      
+      if(length(flow_cols) > 0) {
+        flow_col <- flow_cols[1]
+        
+        # Subtract daily DMR constant from drainage-area-adjusted flow where available
+        has_dmr <- !is.na(res$data$daily_dmr)
+        if(any(has_dmr)) {
+          res$data[[flow_col]][has_dmr] <- res$data[[flow_col]][has_dmr] - res$data$daily_dmr[has_dmr]
+          message(sprintf("Applied DMR adjustment (subtraction) to %d rows for gage %s", sum(has_dmr), gage_id))
+          showNotification(
+            paste("DMR adjustments applied for gage", gage_id, "-", sum(has_dmr), "days adjusted"), 
+            type = "message"
+          )
+        }
+      }
+      
+      # Remove temporary columns
+      res$data$year_month <- NULL
+      res$data$daily_dmr <- NULL
+      
+    }, error = function(e) {
+      message("Error processing DMR file for gage ", gage_id, ": ", e$message)
+      showNotification(
+        paste("Error processing DMR file for gage", gage_id, ":", e$message), 
+        type = "error"
+      )
+    })
+  }
+  
+  return(res)
+})
 
       # Merge all data
       merged <- Reduce(
@@ -472,7 +546,7 @@ adjusted_data <- eventReactive(input$download_btn, {
     })
   }
 })
-    #End of Reactive
+    #End of Reactive############################################################################
 
 
     # Gage selector UI
