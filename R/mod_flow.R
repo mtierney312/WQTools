@@ -40,7 +40,6 @@ mod_flow_ui <- function(id) {
 
           hr(),
           h4("Step 2: Download Flow Data"),
-          # Station drainage area - OUTSIDE both conditional panels
           numericInput(
             ns("target_drainage_area"),
             "Target Location Drainage Area (sq mi):",
@@ -237,7 +236,7 @@ mod_flow_server <- function(id, cleaned_storet_data = NULL) {
         numericInput(
           ns(paste0("da_", gage_id)),
           paste("Gage", gage_id, "Drainage Area (sq mi):"),
-          suggest = 50,
+          value = 50,
           min = 0
         )
       })
