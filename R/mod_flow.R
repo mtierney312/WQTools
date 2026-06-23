@@ -461,17 +461,17 @@ results <- lapply(seq_along(results), function(i) {
         )
         return(res)
       }
-      if(!("Report Start Date" %in% names(dmr_data)) || !("Report End Date" %in% names(dmr_data))) {
+      if(!("Report_Start_Date" %in% names(dmr_data)) || !("Report_End_Date" %in% names(dmr_data))) {
         showNotification(
-          paste("DMR file for gage", gage_id, "must contain 'Report Start Date' and 'Report End Date' columns"), 
+          paste("DMR file for gage", gage_id, "must contain 'Report_Start_Date' and 'Report_End_Date' columns"), 
           type = "warning"
         )
         return(res)
       }
       
       # Parse dates
-      dmr_data$start_date <- parse_dates(dmr_data[["Report Start Date"]], paste("DMR Start Date for", gage_id))
-      dmr_data$end_date <- parse_dates(dmr_data[["Report End Date"]], paste("DMR End Date for", gage_id))
+      dmr_data$start_date <- parse_dates(dmr_data[["Report_Start_Date"]], paste("DMR Start Date for", gage_id))
+      dmr_data$end_date <- parse_dates(dmr_data[["Report_End_Date"]], paste("DMR End Date for", gage_id))
       
       # Calculate days in period and daily DMR constant
       dmr_data$days_in_period <- as.numeric(difftime(dmr_data$end_date, dmr_data$start_date, units = "days")) + 1
