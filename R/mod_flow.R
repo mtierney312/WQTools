@@ -503,17 +503,10 @@ adjusted_data <- eventReactive(input$download_btn, {
         dmr_data$days_in_period <- as.numeric(difftime(dmr_data$end_date, dmr_data$start_date, units = "days")) + 1
         dmr_data$daily_dmr <- dmr_data$LOAD_1_DMR / dmr_data$days_in_period
         
-        # Create year-month identifier
-        dmr_data$year_month <- format(dmr_data$start_date, "%Y-%m")
-        res$data$year_month <- format(res$data$date, "%Y-%m")
-        
-        # Merge with DMR data
-        res$data <- merge(
-          res$data,
-          dmr_data[, c("year_month", "daily_dmr")],
-          by = "year_month",
-          all.x = TRUE
-        )
+        res$data$daily_dmr <- sapply(res$data$date, function(d) {
+  match_row <- which(dmr_data$start_date <= d & dmr_data$end_date >= d)
+  if (length(match_row) > 0) dmr_data$daily_dmr[match_row[1]] else NA_real_
+})
         
         # REVERSE drainage adjustment, SUBTRACT DMR, then RE-APPLY drainage adjustment
         has_dmr <- !is.na(res$data$daily_dmr)
@@ -571,17 +564,10 @@ adjusted_data <- eventReactive(input$download_btn, {
         dmr_data$days_in_period <- as.numeric(difftime(dmr_data$end_date, dmr_data$start_date, units = "days")) + 1
         dmr_data$daily_dmr <- dmr_data$LOAD_1_DMR / dmr_data$days_in_period
         
-        # Create year-month identifier
-        dmr_data$year_month <- format(dmr_data$start_date, "%Y-%m")
-        res$data$year_month <- format(res$data$date, "%Y-%m")
-        
-        # Merge with DMR data
-        res$data <- merge(
-          res$data,
-          dmr_data[, c("year_month", "daily_dmr")],
-          by = "year_month",
-          all.x = TRUE
-        )
+       res$data$daily_dmr <- sapply(res$data$date, function(d) {
+  match_row <- which(dmr_data$start_date <= d & dmr_data$end_date >= d)
+  if (length(match_row) > 0) dmr_data$daily_dmr[match_row[1]] else NA_real_
+})
         
         # ADD daily DMR to drainage-area-adjusted flow
         has_dmr <- !is.na(res$data$daily_dmr)
@@ -1200,22 +1186,11 @@ adjusted_data <- eventReactive(input$download_btn, {
             dmr_data$end_date <- parse_dates(dmr_data[["Report_End_Date"]], "DMR Subtract")
             dmr_data$days_in_period <- as.numeric(difftime(dmr_data$end_date, dmr_data$start_date, units = "days")) + 1
             dmr_data$daily_dmr <- dmr_data$LOAD_1_DMR / dmr_data$days_in_period
-            dmr_data$year_month <- format(dmr_data$start_date, "%Y-%m")
-            
-            temp_data <- data.frame(
-              date = data$date,
-              year_month = format(data$date, "%Y-%m")
-            )
-            
-            temp_data <- merge(
-              temp_data,
-              dmr_data[, c("year_month", "daily_dmr")],
-              by = "year_month",
-              all.x = TRUE
-            )
-            
-            temp_data <- temp_data[order(temp_data$date), ]
-            dmr_subtract_flow <- ifelse(is.na(temp_data$daily_dmr), 0, temp_data$daily_dmr)
+           daily_dmr_vals <- sapply(data$date, function(d) {
+  match_row <- which(dmr_data$start_date <= d & dmr_data$end_date >= d)
+  if (length(match_row) > 0) dmr_data$daily_dmr[match_row[1]] else NA_real_
+})
+dmr_subtract_flow <- ifelse(is.na(daily_dmr_vals), 0, daily_dmr_vals)
           }
         }, error = function(e) {
           message("Error reading DMR subtract file for download: ", e$message)
@@ -1238,22 +1213,11 @@ adjusted_data <- eventReactive(input$download_btn, {
             dmr_data$end_date <- parse_dates(dmr_data[["Report_End_Date"]], "DMR Add")
             dmr_data$days_in_period <- as.numeric(difftime(dmr_data$end_date, dmr_data$start_date, units = "days")) + 1
             dmr_data$daily_dmr <- dmr_data$LOAD_1_DMR / dmr_data$days_in_period
-            dmr_data$year_month <- format(dmr_data$start_date, "%Y-%m")
-            
-            temp_data <- data.frame(
-              date = data$date,
-              year_month = format(data$date, "%Y-%m")
-            )
-            
-            temp_data <- merge(
-              temp_data,
-              dmr_data[, c("year_month", "daily_dmr")],
-              by = "year_month",
-              all.x = TRUE
-            )
-            
-            temp_data <- temp_data[order(temp_data$date), ]
-            dmr_add_flow <- ifelse(is.na(temp_data$daily_dmr), 0, temp_data$daily_dmr)
+            daily_dmr_vals <- sapply(data$date, function(d) {
+  match_row <- which(dmr_data$start_date <= d & dmr_data$end_date >= d)
+  if (length(match_row) > 0) dmr_data$daily_dmr[match_row[1]] else NA_real_
+})
+dmr_add_flow <- ifelse(is.na(daily_dmr_vals), 0, daily_dmr_vals)
           }
         }, error = function(e) {
           message("Error reading DMR add file for download: ", e$message)
