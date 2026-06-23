@@ -24,8 +24,7 @@ mod_flow_ui <- function(id) {
   page_fluid(
     card(
       card_header("Flow Data and Load Duration Analysis"),
-      layout_sidebar(
-        sidebar = sidebar(
+      sidebarPanel(
           h4("Step 1: Get Date Range from STORET Data"),
           radioButtons(
             ns('flow_source'),
@@ -139,7 +138,6 @@ mod_flow_ui <- function(id) {
           nav_panel(
             "Load Reduction Summary",
             tableOutput(ns("load_reduction_table"))
-          )
         )
       )
     )
