@@ -24,7 +24,6 @@ mod_flow_ui <- function(id) {
   page_fluid(
     card(
       card_header("Flow Data and Load Duration Analysis"),
-      sidebarPanel(
           h4("Step 1: Get Date Range from STORET Data"),
           radioButtons(
             ns('flow_source'),
@@ -115,9 +114,10 @@ mod_flow_ui <- function(id) {
             ns("calculate_load_btn"),
             "Calculate Load Duration"
           ),
-          downloadButton(ns('download_plots'), 'Download Plots')
-        ),
-        navset_card_tab(
+          downloadButton(ns('download_plots'), 'Download Plots'),
+        card(
+          card_header('Plots'),
+          navset_card_tab(
           nav_panel(
             "Flow Comparison",
             plotly::plotlyOutput(ns("timeseries_plot"), height = "600px")
