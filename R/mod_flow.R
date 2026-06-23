@@ -734,7 +734,7 @@ adjusted_data <- eventReactive(input$download_btn, {
           MOS=mid_flow_cfs*CONV_FACTOR*(1 - (input$mos_percent / 100)),
         ) %>%
         select(hydro_cat, exceed_p, mid_flow_cfs, p90_conc,
-               existing_load, target_load, load_reduction, pct_reduction, meets_standard,MOS)
+               existing_load, MOS, target_load, load_reduction, pct_reduction, meets_standard)
 
       list(
         target_curve = target_curve,
