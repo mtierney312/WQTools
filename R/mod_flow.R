@@ -43,8 +43,6 @@ mod_flow_ui <- function(id) {
           numericInput(
             ns("target_drainage_area"),
             "Target Location Drainage Area (sq mi):",
-            value="",
-            placeholder = '47.7',
             min = 0
           ),
           radioButtons(
@@ -237,8 +235,6 @@ mod_flow_server <- function(id, cleaned_storet_data = NULL) {
         numericInput(
           ns(paste0("da_", gage_id)),
           paste("Gage", gage_id, "Drainage Area (sq mi):"),
-          value=""
-          placeholder = '50',
           min = 0
         )
       })
