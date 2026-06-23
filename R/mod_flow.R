@@ -97,7 +97,8 @@ mod_flow_ui <- function(id) {
         # Step 3
         card(
           card_header("Step 3: Select Gage for Load Analysis"),
-          uiOutput(ns('DMR_inputs')),
+          uiOutput(ns('DMR_subtract')),
+          uiOutput(ns('DMR_add')),
           uiOutput(ns("gage_selector")),
           numericInput(
             ns("wq_target"),
@@ -252,12 +253,12 @@ mod_flow_server <- function(id, cleaned_storet_data = NULL) {
         )
       })
     })
-    output$DMR_inputs <- renderUI({
+    output$DMR_subtract <- renderUI({
   gages <- gage_list()
   if(length(gages) == 0) return(NULL)
   
   tagList(
-    h5("Upload DMR Files (Optional):"),
+    h5("Upload DMR Files to Subtract (Optional):"),
     lapply(gages, function(gage_id) {
       fileInput(
         ns(paste0("dmr_", gage_id)),
@@ -267,6 +268,21 @@ mod_flow_server <- function(id, cleaned_storet_data = NULL) {
     })
   )
 })
+  output$DMR_add<-renderUI({
+    gages<-gage_list()
+    if(length(gages)==0) return(NULL)
+
+    tagList(
+      h5('Upload DMR Files to Add (Optional):'),
+      lapply(gages,function(gage_id){
+      fileInput(
+        ns(paste0('dmr_',gage_id)),
+        paste('DMR for Gage',gage_id,':'),
+        accept='.csv'
+        )
+      })
+      )
+    })
 
     # Download and adjust USGS gage data#################################################################################
 adjusted_data <- eventReactive(input$download_btn, {
