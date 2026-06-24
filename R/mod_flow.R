@@ -1117,7 +1117,52 @@ results <- lapply(seq_along(results), function(i) {
         }, error = function(e) {
           message("Could not save table: ", e$message)
         })
-
+        tryCatch({
+          req(adjusted_data())
+          req(source_ecoli_data())
+          flow_all <- adjusted_data()
+          storet <- source_ecoli_data()
+          # Standardize STORET date column
+          storet$date <- parse_dates(storet$ActivityStartDate, "STORET Date")
+          # Merge STORET with flow data (STORET drives the matching)
+          merged_storet <- storet %>%
+          left_join(flow_all, by = "date")
+          # Add DMR info for each gage
+          gages <- attr(flow_all, "gage_list")
+          for(g in gages) {
+            g_suffix <- gsub("[^0-9]", "", g)
+            flow_col <- paste0("flow_", g_suffix)
+            # DMR subtract
+            dmr_sub_input <- input[[paste0("dmr_subtract_", g)]]
+            if(!is.null(dmr_sub_input)) {
+              dmr <- read.csv(dmr_sub_input$datapath, stringsAsFactors = FALSE)
+              dmr$start_date <- parse_dates(dmr$Report_Start_Date)
+              dmr$end_date   <- parse_dates(dmr$Report_End_Date)
+              dmr$daily_dmr  <- dmr$LOAD_1_DMR
+              merged_storet[[paste0("dmr_subtract_", g_suffix)]] <- sapply(merged_storet$date, function(d) {
+                i <- which(dmr$start_date <= d & dmr$end_date >= d)
+                if(length(i)>0) dmr$daily_dmr[i[1]] else 0
+                  })
+            }
+            # DMR add
+            dmr_add_input <- input[[paste0("dmr_add_", g)]]
+            if(!is.null(dmr_add_input)) {
+              dmr <- read.csv(dmr_add_input$datapath, stringsAsFactors = FALSE)
+              dmr$start_date <- parse_dates(dmr$Report_Start_Date)
+              dmr$end_date   <- parse_dates(dmr$Report_End_Date)
+              dmr$daily_dmr  <- dmr$LOAD_1_DMR
+              merged_storet[[paste0("dmr_add_", g_suffix)]] <- sapply(merged_storet$date, function(d) {
+                i <- which(dmr$start_date <= d & dmr$end_date >= d)
+                if(length(i)>0) dmr$daily_dmr[i[1]] else 0
+                  })
+            }}
+          # Write STORET‑merged CSV
+          storet_file <- file.path(temp_dir, "04_storet_flow_dmr_matched.csv")
+          write.csv(merged_storet, storet_file, row.names = FALSE)
+          temp_files <- c(temp_files, storet_file)
+        }, error = function(e) {
+          message("STORET-matched export failed: ", e$message)
+        })
         # Create zip file
         if (length(temp_files) > 0) {
           zip::zip(zipfile = file, files = temp_files, mode = "cherry-pick")
