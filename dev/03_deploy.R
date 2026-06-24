@@ -30,7 +30,7 @@ devtools::build()
 golem::add_dockerfile_with_renv()
 ## If you want to deploy to ShinyProxy
 golem::add_dockerfile_with_renv_shinyproxy()
-
+#remotes::install_version("terra", version = "1.9-27")
 ## Posit ----
 ## If you want to deploy on Posit related platforms
 golem::add_positconnect_file()
