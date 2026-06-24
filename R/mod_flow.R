@@ -72,7 +72,9 @@ mod_flow_ui <- function(id) {
               "Select Date Range:",
               start = Sys.Date() - 365,
               end = Sys.Date()
-            )
+            ),
+            uiOutput(ns('DMR_subtract')),
+          uiOutput(ns('DMR_add'))
           ),
           checkboxInput(ns('nonzero'), "Check to set any negative values to .0001", value = TRUE),
           conditionalPanel(
@@ -97,8 +99,6 @@ mod_flow_ui <- function(id) {
         # Step 3
         card(
           card_header("Step 3: Select Gage for Load Analysis"),
-          uiOutput(ns('DMR_subtract')),
-          uiOutput(ns('DMR_add')),
           uiOutput(ns("gage_selector")),
           numericInput(
             ns("wq_target"),
