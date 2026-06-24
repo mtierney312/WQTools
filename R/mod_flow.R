@@ -477,7 +477,12 @@ adjusted_data <- eventReactive(input$download_btn, {
   gage_da <- input[[paste0("da_", gage_id)]]
   da_ratio <- target_da / gage_da
   
-  #SUBTRACT DMR (before drainage adjustment)
+  # SAVE ORIGINAL FLOW (before any adjustments)
+  res$data$raw_flow <- res$data[[flow_col]] / da_ratio  # Reverse DA to get original USGS
+  res$data$dmr_subtract <- 0  # Initialize
+  res$data$dmr_add <- 0  # Initialize
+  
+  # SUBTRACT DMR (before drainage adjustment)
   dmr_subtract_input <- input[[paste0("dmr_subtract_", gage_id)]]
   
   if(!is.null(dmr_subtract_input)) {
@@ -499,33 +504,27 @@ adjusted_data <- eventReactive(input$download_btn, {
         dmr_data$start_date <- parse_dates(dmr_data[["Report_Start_Date"]], paste("DMR Subtract Start Date for", gage_id))
         dmr_data$end_date <- parse_dates(dmr_data[["Report_End_Date"]], paste("DMR Subtract End Date for", gage_id))
         
-        # Calculate days in period and daily DMR constant
-        dmr_data$days_in_period <- as.numeric(difftime(dmr_data$end_date, dmr_data$start_date, units = "days")) + 1
+        # Calculate daily DMR constant
         dmr_data$daily_dmr <- dmr_data$LOAD_1_DMR
         
-        res$data$daily_dmr <- sapply(res$data$date, function(d) {
-  match_row <- which(dmr_data$start_date <= d & dmr_data$end_date >= d)
-  if (length(match_row) > 0) dmr_data$daily_dmr[match_row[1]] else NA_real_
-})
+        # Match DMR to flow dates and SAVE the subtract values
+        res$data$dmr_subtract <- sapply(res$data$date, function(d) {
+          match_row <- which(dmr_data$start_date <= d & dmr_data$end_date >= d)
+          if (length(match_row) > 0) dmr_data$daily_dmr[match_row[1]] else 0
+        })
         
-        # REVERSE drainage adjustment, SUBTRACT DMR, then RE-APPLY drainage adjustment
-        has_dmr <- !is.na(res$data$daily_dmr)
+        # Apply subtraction
+        has_dmr <- res$data$dmr_subtract > 0
         if(any(has_dmr)) {
-          # Reverse DA ratio to get back to raw USGS
-          res$data[[flow_col]][has_dmr] <- (res$data[[flow_col]][has_dmr] / da_ratio) - res$data$daily_dmr[has_dmr]
-          # Re-apply DA ratio
-          res$data[[flow_col]][has_dmr] <- res$data[[flow_col]][has_dmr] * da_ratio
+          # Subtract from raw flow, then apply DA adjustment
+          res$data[[flow_col]][has_dmr] <- (res$data$raw_flow[has_dmr] - res$data$dmr_subtract[has_dmr]) * da_ratio
           
-          message(sprintf("Applied DMR subtraction to %d rows for gage %s (before drainage adjustment)", sum(has_dmr), gage_id))
+          message(sprintf("Applied DMR subtraction to %d rows for gage %s", sum(has_dmr), gage_id))
           showNotification(
             paste("DMR subtraction applied for gage", gage_id, "-", sum(has_dmr), "days adjusted"), 
             type = "message"
           )
         }
-        
-        # Remove temporary columns
-        res$data$year_month <- NULL
-        res$data$daily_dmr <- NULL
       }
     }, error = function(e) {
       message("Error processing DMR subtract file for gage ", gage_id, ": ", e$message)
@@ -533,10 +532,10 @@ adjusted_data <- eventReactive(input$download_btn, {
         paste("Error processing DMR subtract file for gage", gage_id, ":", e$message), 
         type = "error"
       )
-    })}
+    })
+  }
   
-  
-  #ADD DMR (after drainage adjustment)
+  # ADD DMR (after drainage adjustment)
   dmr_add_input <- input[[paste0("dmr_add_", gage_id)]]
   
   if(!is.null(dmr_add_input)) {
@@ -558,29 +557,25 @@ adjusted_data <- eventReactive(input$download_btn, {
         dmr_data$start_date <- parse_dates(dmr_data[["Report_Start_Date"]], paste("DMR Add Start Date for", gage_id))
         dmr_data$end_date <- parse_dates(dmr_data[["Report_End_Date"]], paste("DMR Add End Date for", gage_id))
         
-        # Calculate days in period and daily DMR constant
-        dmr_data$days_in_period <- as.numeric(difftime(dmr_data$end_date, dmr_data$start_date, units = "days")) + 1
+        # Calculate daily DMR constant
         dmr_data$daily_dmr <- dmr_data$LOAD_1_DMR
         
-       res$data$daily_dmr <- sapply(res$data$date, function(d) {
-  match_row <- which(dmr_data$start_date <= d & dmr_data$end_date >= d)
-  if (length(match_row) > 0) dmr_data$daily_dmr[match_row[1]] else NA_real_
-})
+        # Match DMR to flow dates and SAVE the add values
+        res$data$dmr_add <- sapply(res$data$date, function(d) {
+          match_row <- which(dmr_data$start_date <= d & dmr_data$end_date >= d)
+          if (length(match_row) > 0) dmr_data$daily_dmr[match_row[1]] else 0
+        })
         
-        # ADD daily DMR to drainage-area-adjusted flow
-        has_dmr <- !is.na(res$data$daily_dmr)
+        # Apply addition
+        has_dmr <- res$data$dmr_add > 0
         if(any(has_dmr)) {
-          res$data[[flow_col]][has_dmr] <- res$data[[flow_col]][has_dmr] + res$data$daily_dmr[has_dmr]
-          message(sprintf("Applied DMR addition to %d rows for gage %s (after drainage adjustment)", sum(has_dmr), gage_id))
+          res$data[[flow_col]][has_dmr] <- res$data[[flow_col]][has_dmr] + res$data$dmr_add[has_dmr]
+          message(sprintf("Applied DMR addition to %d rows for gage %s", sum(has_dmr), gage_id))
           showNotification(
             paste("DMR addition applied for gage", gage_id, "-", sum(has_dmr), "days adjusted"), 
             type = "message"
           )
         }
-        
-        # Remove temporary columns
-        res$data$year_month <- NULL
-        res$data$daily_dmr <- NULL
       }
     }, error = function(e) {
       message("Error processing DMR add file for gage ", gage_id, ": ", e$message)
@@ -590,6 +585,17 @@ adjusted_data <- eventReactive(input$download_btn, {
       )
     })
   }
+  
+  # Rename columns to include gage ID
+  names(res$data)[names(res$data) == "raw_flow"] <- paste0("gage_", gage_id, "_raw_flow_cfs")
+  names(res$data)[names(res$data) == "dmr_subtract"] <- paste0("gage_", gage_id, "_dmr_subtract_cfs")
+  names(res$data)[names(res$data) == "dmr_add"] <- paste0("gage_", gage_id, "_dmr_add_cfs")
+  
+  # Add DA ratio column
+  res$data[[paste0("gage_", gage_id, "_drainage_area_ratio")]] <- da_ratio
+  
+  # Rename the final adjusted flow column
+  names(res$data)[names(res$data) == flow_col] <- paste0("gage_", gage_id, "_adjusted_flow_cfs")
   
   return(res)
 })
