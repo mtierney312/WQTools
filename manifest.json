@@ -6343,7 +6343,12 @@
         "Repository": "CRAN",
         "Date/Publication": "2026-06-19 15:10:02 UTC",
         "Built": "R 4.6.0; x86_64-w64-mingw32; 2026-06-22 08:59:50 UTC; windows",
-        "Archs": "x64"
+        "Archs": "x64",
+        "RemoteType": "standard",
+        "RemotePkgRef": "terra",
+        "RemoteRef": "terra",
+        "RemoteRepos": "https://cran.rstudio.com",
+        "RemoteSha.Version": "1.9-34"
       }
     },
     "testthat": {
@@ -7356,7 +7361,7 @@
       "checksum": "6dd8ffc1ce8c704607d42563ad12c835"
     },
     "dev/02_dev.R": {
-      "checksum": "af37548255aa621d95976d17190dc04c"
+      "checksum": "98cd31bcbae9ef272b79c2060f7ae4cc"
     },
     "dev/03_deploy.R": {
       "checksum": "121d2bde8a3cc098e028b3492a268fe9"

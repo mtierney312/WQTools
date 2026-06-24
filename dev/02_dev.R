@@ -46,7 +46,7 @@ attachment::att_amend_desc()
 ## Creates fct_* and utils_*
 #golem::add_fct("helpers", with_test = TRUE)
 #golem::add_utils("characteristics", with_test = TRUE)
-
+#remotes::install_github("USEPA/EPATADA", ref = "develop", dependencies = TRUE, force = TRUE)
 ## External resources
 ## Creates .js and .css files at inst/app/www
 #golem::add_js_file("script")
