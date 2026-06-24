@@ -533,11 +533,10 @@ adjusted_data <- eventReactive(input$download_btn, {
         paste("Error processing DMR subtract file for gage", gage_id, ":", e$message), 
         type = "error"
       )
-    })
-  }
+    })}
   
   
-  ADD DMR (after drainage adjustment)
+  #ADD DMR (after drainage adjustment)
   dmr_add_input <- input[[paste0("dmr_add_", gage_id)]]
   
   if(!is.null(dmr_add_input)) {
