@@ -21,7 +21,7 @@ mod_Velocity_ui<-function(id){
         textInput(ns("SCID"),"What is the Permit ID?:"),
         numericInput(ns("Reaches"),"How many reaches are in your model?:",value=1,min=0,max=20,step=1,updateOn = "blur"),
         numericInput(ns("elementlength"),"What is the length of each element?:",value=0.1,min=0.1,max=1,step=0.1,updateOn = "blur"),
-        numericInput(ns("outfallmgd"),"What is the design flow in MGD?:",value=0,min=0,max=1000,step=1,updateOn = "blur"),
+        numericInput(ns("outfallmgd"),"What is the design or LTA flow in MGD?:",value=0,min=0,max=1000,step=1,updateOn = "blur"),
         "Your design flow in CFS is:", textOutput(ns('flowcfs')),
         br(),
         em("NOTE: If you change something in the input boxes, make sure you click on a cell and press the *Enter*
@@ -182,23 +182,23 @@ mod_Velocity_server  <- function(id){
       req(tbl())
       rhandsontable(tbl())%>%
         hot_col('Model Section',readOnly = TRUE)%>%
-        hot_col('Incremental D.A. (mi2)',readOnly = FALSE)%>%
-        hot_col('Cumulative D.A. (mi2)',readOnly = TRUE)%>%
-        hot_col('Length (mi)',readOnly = FALSE)%>%
-        hot_col('Cumulative Length (mi)',readOnly = TRUE)%>%
-        hot_col('Upper Contour (ft)',readOnly=FALSE)%>%
-        hot_col('Lower Contour (ft)',readOnly=FALSE)%>%
-        hot_col('Slope (ft/mi)',readOnly = TRUE)%>%
-        hot_col('K1',readOnly = FALSE)%>%
-        hot_col('K2',readOnly=TRUE)%>%
-        hot_col('K3',readOnly=TRUE,type="numeric")%>%
-        hot_col('Unit7Q10 (cfs/mi)',readOnly=FALSE,type="numeric")%>%
-        hot_col('7Q10 Incremental Flow (cfs)',readOnly = TRUE,type='numeric')%>%
-        hot_col('Cumulative Flow (cfs)',readOnly = TRUE)%>%
-        hot_col('Velocity (ft/sec)',readOnly = TRUE)%>%
-        hot_col('Alternative Velocity',readOnly = TRUE,type='numeric')%>%
-        hot_col("Alternative K2",readOnly = TRUE)%>%
-        hot_col('Number of Elements',readOnly = TRUE)
+        hot_col('Incremental D.A. (mi2)',readOnly = FALSE,format='0.000')%>%
+        hot_col('Cumulative D.A. (mi2)',readOnly = TRUE,format='0.000')%>%
+        hot_col('Length (mi)',readOnly = FALSE,format='0.000')%>%
+        hot_col('Cumulative Length (mi)',readOnly = TRUE,format='0.000')%>%
+        hot_col('Upper Contour (ft)',readOnly=FALSE,format='0.000')%>%
+        hot_col('Lower Contour (ft)',readOnly=FALSE,format='0.000')%>%
+        hot_col('Slope (ft/mi)',readOnly = TRUE,format='0.000')%>%
+        hot_col('K1',readOnly = FALSE,format='0.000')%>%
+        hot_col('K2',readOnly=TRUE,format='0.000')%>%
+        hot_col('K3',readOnly=TRUE,type="numeric",format='0.000')%>%
+        hot_col('Unit7Q10 (cfs/mi)',readOnly=FALSE,type="numeric",format='0.000')%>%
+        hot_col('7Q10 Incremental Flow (cfs)',readOnly = TRUE,type='numeric',format='0.000')%>%
+        hot_col('Cumulative Flow (cfs)',readOnly = TRUE,format='0.000')%>%
+        hot_col('Velocity (ft/sec)',readOnly = TRUE,format='0.000')%>%
+        hot_col('Alternative Velocity',readOnly = TRUE,type='numeric',format='0.000')%>%
+        hot_col("Alternative K2",readOnly = TRUE,format='0.000')%>%
+        hot_col('Number of Elements',readOnly = TRUE,format='0.000')
     })
     output$downloadtable<-downloadHandler(
       filename=function(input,output){

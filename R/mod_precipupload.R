@@ -106,7 +106,7 @@ mod_precipupload_server <- function(id, cleaned_storet_data = NULL){
 
       # Parse dates and store result
       df$ActivityStartDate <- parse_dates(df$ActivityStartDate, "ActivityStartDate")
-      
+
       # Check if any dates were successfully parsed
       if(all(is.na(df$ActivityStartDate))) {
         return(
@@ -117,7 +117,7 @@ mod_precipupload_server <- function(id, cleaned_storet_data = NULL){
           )
         )
       }
-      
+
       min_date <- min(df$ActivityStartDate, na.rm = TRUE)
       max_date <- max(df$ActivityStartDate, na.rm = TRUE)
 
@@ -246,7 +246,7 @@ mod_precipupload_server <- function(id, cleaned_storet_data = NULL){
       data <- merged_data()
       if(!is.null(data)) paste0("Matched records: ", nrow(data)) else ""
     })
-    
+
     plotInput <- function(){
       req(merged_data())
       data <- merged_data()
@@ -268,7 +268,7 @@ mod_precipupload_server <- function(id, cleaned_storet_data = NULL){
       r_squared <- summary(lm_model)$r.squared
       legend("topleft",
              legend = c(sprintf("y = %.2fx + %.2f", coef(lm_model)[2], coef(lm_model)[1]),
-                        sprintf("R² = %.3f", r_squared)),
+                        sprintf("R2 = %.3f", r_squared)),
              bty = "n", text.col = "black", cex = 1.1)
     }
 
