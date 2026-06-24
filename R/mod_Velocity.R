@@ -50,7 +50,7 @@ mod_Velocity_server  <- function(id){
     })
     output$flowcfs<-renderText({
       req(flowcfs())
-      paste0(round(flowcfs(),3)," cfs")
+      paste0(round(flowcfs(),5)," cfs")
     })
     tbl<-reactiveVal()
     calculateTable<-function(df){
