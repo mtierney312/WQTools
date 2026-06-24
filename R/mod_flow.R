@@ -477,7 +477,7 @@ adjusted_data <- eventReactive(input$download_btn, {
   gage_da <- input[[paste0("da_", gage_id)]]
   da_ratio <- target_da / gage_da
   
-  # Step 1: SUBTRACT DMR (before drainage adjustment)
+  #SUBTRACT DMR (before drainage adjustment)
   dmr_subtract_input <- input[[paste0("dmr_subtract_", gage_id)]]
   
   if(!is.null(dmr_subtract_input)) {
@@ -501,7 +501,7 @@ adjusted_data <- eventReactive(input$download_btn, {
         
         # Calculate days in period and daily DMR constant
         dmr_data$days_in_period <- as.numeric(difftime(dmr_data$end_date, dmr_data$start_date, units = "days")) + 1
-        dmr_data$daily_dmr <- dmr_data$LOAD_1_DMR / dmr_data$days_in_period
+        dmr_data$daily_dmr <- dmr_data$LOAD_1_DMR
         
         res$data$daily_dmr <- sapply(res$data$date, function(d) {
   match_row <- which(dmr_data$start_date <= d & dmr_data$end_date >= d)
@@ -536,9 +536,8 @@ adjusted_data <- eventReactive(input$download_btn, {
     })
   }
   
-  # Step 2: Drainage area ratio is already applied (no action needed)
   
-  # Step 3: ADD DMR (after drainage adjustment)
+  ADD DMR (after drainage adjustment)
   dmr_add_input <- input[[paste0("dmr_add_", gage_id)]]
   
   if(!is.null(dmr_add_input)) {
@@ -562,7 +561,7 @@ adjusted_data <- eventReactive(input$download_btn, {
         
         # Calculate days in period and daily DMR constant
         dmr_data$days_in_period <- as.numeric(difftime(dmr_data$end_date, dmr_data$start_date, units = "days")) + 1
-        dmr_data$daily_dmr <- dmr_data$LOAD_1_DMR / dmr_data$days_in_period
+        dmr_data$daily_dmr <- dmr_data$LOAD_1_DMR
         
        res$data$daily_dmr <- sapply(res$data$date, function(d) {
   match_row <- which(dmr_data$start_date <= d & dmr_data$end_date >= d)
@@ -1185,7 +1184,7 @@ adjusted_data <- eventReactive(input$download_btn, {
             dmr_data$start_date <- parse_dates(dmr_data[["Report_Start_Date"]], "DMR Subtract")
             dmr_data$end_date <- parse_dates(dmr_data[["Report_End_Date"]], "DMR Subtract")
             dmr_data$days_in_period <- as.numeric(difftime(dmr_data$end_date, dmr_data$start_date, units = "days")) + 1
-            dmr_data$daily_dmr <- dmr_data$LOAD_1_DMR / dmr_data$days_in_period
+            dmr_data$daily_dmr <- dmr_data$LOAD_1_DMR
            daily_dmr_vals <- sapply(data$date, function(d) {
   match_row <- which(dmr_data$start_date <= d & dmr_data$end_date >= d)
   if (length(match_row) > 0) dmr_data$daily_dmr[match_row[1]] else NA_real_
@@ -1212,7 +1211,7 @@ dmr_subtract_flow <- ifelse(is.na(daily_dmr_vals), 0, daily_dmr_vals)
             dmr_data$start_date <- parse_dates(dmr_data[["Report_Start_Date"]], "DMR Add")
             dmr_data$end_date <- parse_dates(dmr_data[["Report_End_Date"]], "DMR Add")
             dmr_data$days_in_period <- as.numeric(difftime(dmr_data$end_date, dmr_data$start_date, units = "days")) + 1
-            dmr_data$daily_dmr <- dmr_data$LOAD_1_DMR / dmr_data$days_in_period
+            dmr_data$daily_dmr <- dmr_data$LOAD_1_DMR
             daily_dmr_vals <- sapply(data$date, function(d) {
   match_row <- which(dmr_data$start_date <= d & dmr_data$end_date >= d)
   if (length(match_row) > 0) dmr_data$daily_dmr[match_row[1]] else NA_real_
