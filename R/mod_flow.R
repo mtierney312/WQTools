@@ -261,7 +261,7 @@ mod_flow_server <- function(id, cleaned_storet_data = NULL) {
     h5("Upload DMR Files to Subtract (Optional):"),
     lapply(gages, function(gage_id) {
       fileInput(
-        ns(paste0("dmr_subtract", gage_id)),
+        ns(paste0("dmr_subtract_", gage_id)),
         paste("DMR for Gage", gage_id, ":"),
         accept = '.csv'
       )
@@ -276,7 +276,7 @@ mod_flow_server <- function(id, cleaned_storet_data = NULL) {
       h5('Upload DMR Files to Add (Optional):'),
       lapply(gages,function(gage_id){
       fileInput(
-        ns(paste0('dmr_add',gage_id)),
+        ns(paste0('dmr_add_',gage_id)),
         paste('DMR for Gage',gage_id,':'),
         accept='.csv'
         )
