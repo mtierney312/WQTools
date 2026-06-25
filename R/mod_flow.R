@@ -1204,124 +1204,147 @@ if(length(results) == 0) {
     )
 
     output$download_flow_csv <- downloadHandler(
-  filename = function() {
-    paste0("flow_data_detailed_", Sys.Date(), ".csv")
-  },
-  content = function(file) {
-    req(adjusted_data())
+      filename = function() {
+        paste0("flow_data_detailed_", Sys.Date(), ".csv")
+      },
+      content = function(file) {
+        req(adjusted_data())
 
-    data <- adjusted_data()
-    gages <- attr(data, "gage_list")
-    drainage_info <- attr(data, "drainage_info")
+        data <- adjusted_data()
+        gages <- attr(data, "gage_list")
+        drainage_info <- attr(data, "drainage_info")
 
-    if(is.null(gages) || length(gages) == 0) {
-      showNotification("No gage data available to download", type = "error")
-      return(NULL)
-    }
+        if(is.null(gages) || length(gages) == 0) {
+          showNotification("No gage data available to download", type = "error")
+          return(NULL)
+        }
 
-    # Start with the date column
-    export_data <- data %>% select(date)
+        # Start with the date column
+        export_data <- data %>% select(date)
 
-    # Process each gage
-    for(i in seq_along(gages)) {
-      gage_id <- gages[i]
+        # Process each gage
+        for(i in seq_along(gages)) {
+          gage_id <- gages[i]
 
-      # Get the drainage area info for this gage
-      da_info <- drainage_info[drainage_info$Gage_ID == gage_id, ]
-      da_ratio <- if(nrow(da_info) > 0) da_info$DA_Ratio else 1.0
+          # Get the drainage area info for this gage
+          da_info <- drainage_info[drainage_info$Gage_ID == gage_id, ]
+          da_ratio <- if(nrow(da_info) > 0) da_info$DA_Ratio else 1.0
 
-      # Reconstruct the raw flow (before any adjustments)
-      flow_col <- paste0("flow_", gsub("[^0-9]", "", gage_id))
+          # Reconstruct the raw flow (before any adjustments)
+          flow_col <- paste0("flow_", gsub("[^0-9]", "", gage_id))
 
-      if(!flow_col %in% names(data)) {
-        next  # Skip if this gage's data isn't in the dataset
-      }
-
-      # Get the final adjusted flow
-      final_flow <- data[[flow_col]]
-
-      # Reconstruct raw flow by reversing the drainage adjustment
-      raw_flow <- final_flow / da_ratio
-
-      # Get DMR subtract data if it was uploaded
-      dmr_subtract_input <- input[[paste0("dmr_subtract_", gage_id)]]
-      dmr_subtract_flow <- rep(0, nrow(data))
-
-      if(!is.null(dmr_subtract_input)) {
-        tryCatch({
-          dmr_data <- read.csv(dmr_subtract_input$datapath, stringsAsFactors = FALSE)
-
-          if("LOAD_1_DMR" %in% names(dmr_data) &&
-             "Report_Start_Date" %in% names(dmr_data) &&
-             "Report_End_Date" %in% names(dmr_data)) {
-
-            dmr_data$start_date <- parse_dates(dmr_data[["Report_Start_Date"]], "DMR Subtract")
-            dmr_data$end_date <- parse_dates(dmr_data[["Report_End_Date"]], "DMR Subtract")
-            dmr_data$days_in_period <- as.numeric(difftime(dmr_data$end_date, dmr_data$start_date, units = "days")) + 1
-            dmr_data$daily_dmr <- dmr_data$LOAD_1_DMR
-           daily_dmr_vals <- sapply(data$date, function(d) {
-  match_row <- which(dmr_data$start_date <= d & dmr_data$end_date >= d)
-  if (length(match_row) > 0) dmr_data$daily_dmr[match_row[1]] else NA_real_
-})
-dmr_subtract_flow <- ifelse(is.na(daily_dmr_vals), 0, daily_dmr_vals)
+          if(!flow_col %in% names(data)) {
+            next  # Skip if this gage's data isn't in the dataset
           }
-        }, error = function(e) {
-          message("Error reading DMR subtract file for download: ", e$message)
-        })
-      }
 
-      # Get DMR add data if it was uploaded
-      dmr_add_input <- input[[paste0("dmr_add_", gage_id)]]
-      dmr_add_flow <- rep(0, nrow(data))
+          # Get the final adjusted flow
+          final_flow <- data[[flow_col]]
 
-      if(!is.null(dmr_add_input)) {
-        tryCatch({
-          dmr_data <- read.csv(dmr_add_input$datapath, stringsAsFactors = FALSE)
+          # Reconstruct raw flow by reversing the drainage adjustment
+          raw_flow <- final_flow / da_ratio
 
-          if("LOAD_1_DMR" %in% names(dmr_data) &&
-             "Report_Start_Date" %in% names(dmr_data) &&
-             "Report_End_Date" %in% names(dmr_data)) {
+          # Get DMR subtract data - HANDLE MULTIPLE FILES
+          dmr_subtract_input <- input[[paste0("dmr_subtract_", gage_id)]]
+          dmr_subtract_flow <- rep(0, nrow(data))
 
-            dmr_data$start_date <- parse_dates(dmr_data[["Report_Start_Date"]], "DMR Add")
-            dmr_data$end_date <- parse_dates(dmr_data[["Report_End_Date"]], "DMR Add")
-            dmr_data$days_in_period <- as.numeric(difftime(dmr_data$end_date, dmr_data$start_date, units = "days")) + 1
-            dmr_data$daily_dmr <- dmr_data$LOAD_1_DMR
-            daily_dmr_vals <- sapply(data$date, function(d) {
-  match_row <- which(dmr_data$start_date <= d & dmr_data$end_date >= d)
-  if (length(match_row) > 0) dmr_data$daily_dmr[match_row[1]] else NA_real_
-})
-dmr_add_flow <- ifelse(is.na(daily_dmr_vals), 0, daily_dmr_vals)
+          if(!is.null(dmr_subtract_input) && nrow(dmr_subtract_input) > 0) {
+            # Process each DMR file and sum values for each date
+            for(file_idx in 1:nrow(dmr_subtract_input)) {
+              tryCatch({
+                dmr_data <- read.csv(dmr_subtract_input$datapath[file_idx], stringsAsFactors = FALSE)
+
+                if("LOAD_1_DMR" %in% names(dmr_data) &&
+                   "Report_Start_Date" %in% names(dmr_data) &&
+                   "Report_End_Date" %in% names(dmr_data)) {
+
+                  dmr_data$start_date <- parse_dates(dmr_data[["Report_Start_Date"]],
+                                                     paste("DMR Subtract", file_idx))
+                  dmr_data$end_date <- parse_dates(dmr_data[["Report_End_Date"]],
+                                                   paste("DMR Subtract", file_idx))
+                  dmr_data$daily_dmr <- dmr_data$LOAD_1_DMR
+
+                  # Add DMR values to existing totals (to handle overlaps)
+                  daily_dmr_vals <- sapply(data$date, function(d) {
+                    match_rows <- which(dmr_data$start_date <= d & dmr_data$end_date >= d)
+                    if (length(match_rows) > 0) {
+                      sum(dmr_data$daily_dmr[match_rows], na.rm = TRUE)
+                    } else {
+                      0
+                    }
+                  })
+
+                  dmr_subtract_flow <- dmr_subtract_flow + daily_dmr_vals
+                }
+              }, error = function(e) {
+                message("Error reading DMR subtract file ", file_idx, " for gage ", gage_id,
+                        " in download: ", e$message)
+              })
+            }
           }
-        }, error = function(e) {
-          message("Error reading DMR add file for download: ", e$message)
-        })
+
+          # Get DMR add data - HANDLE MULTIPLE FILES
+          dmr_add_input <- input[[paste0("dmr_add_", gage_id)]]
+          dmr_add_flow <- rep(0, nrow(data))
+
+          if(!is.null(dmr_add_input) && nrow(dmr_add_input) > 0) {
+            # Process each DMR file and sum values for each date
+            for(file_idx in 1:nrow(dmr_add_input)) {
+              tryCatch({
+                dmr_data <- read.csv(dmr_add_input$datapath[file_idx], stringsAsFactors = FALSE)
+
+                if("LOAD_1_DMR" %in% names(dmr_data) &&
+                   "Report_Start_Date" %in% names(dmr_data) &&
+                   "Report_End_Date" %in% names(dmr_data)) {
+
+                  dmr_data$start_date <- parse_dates(dmr_data[["Report_Start_Date"]],
+                                                     paste("DMR Add", file_idx))
+                  dmr_data$end_date <- parse_dates(dmr_data[["Report_End_Date"]],
+                                                   paste("DMR Add", file_idx))
+                  dmr_data$daily_dmr <- dmr_data$LOAD_1_DMR
+
+                  # Add DMR values to existing totals (to handle overlaps)
+                  daily_dmr_vals <- sapply(data$date, function(d) {
+                    match_rows <- which(dmr_data$start_date <= d & dmr_data$end_date >= d)
+                    if (length(match_rows) > 0) {
+                      sum(dmr_data$daily_dmr[match_rows], na.rm = TRUE)
+                    } else {
+                      0
+                    }
+                  })
+
+                  dmr_add_flow <- dmr_add_flow + daily_dmr_vals
+                }
+              }, error = function(e) {
+                message("Error reading DMR add file ", file_idx, " for gage ", gage_id,
+                        " in download: ", e$message)
+              })
+            }
+          }
+
+          # Create column names with gage prefix
+          gage_suffix <- gsub("[^0-9]", "", gage_id)
+
+          # Add columns for this gage
+          export_data[[paste0("gage_", gage_suffix, "_raw_flow_cfs")]] <- round(raw_flow, 4)
+          export_data[[paste0("gage_", gage_suffix, "_dmr_subtract_cfs")]] <- round(dmr_subtract_flow, 4)
+          export_data[[paste0("gage_", gage_suffix, "_dmr_add_cfs")]] <- round(dmr_add_flow, 4)
+          export_data[[paste0("gage_", gage_suffix, "_drainage_area_ratio")]] <- round(da_ratio, 4)
+          export_data[[paste0("gage_", gage_suffix, "_adjusted_flow_cfs")]] <- round(final_flow, 4)
+        }
+
+        # Remove any rows with all NA values (except date)
+        export_data <- export_data[rowSums(is.na(export_data[, -1])) < (ncol(export_data) - 1), ]
+
+        # Write the CSV
+        write.csv(export_data, file, row.names = FALSE)
+
+        showNotification(
+          paste("Detailed flow data for", length(gages), "gage(s) downloaded successfully"),
+          type = "message"
+        )
       }
-
-      # Create column names with gage prefix
-      gage_suffix <- gsub("[^0-9]", "", gage_id)
-
-      # Add columns for this gage
-      export_data[[paste0("gage_", gage_suffix, "_raw_flow_cfs")]] <- round(raw_flow, 4)
-      export_data[[paste0("gage_", gage_suffix, "_dmr_subtract_cfs")]] <- round(dmr_subtract_flow, 4)
-      export_data[[paste0("gage_", gage_suffix, "_dmr_add_cfs")]] <- round(dmr_add_flow, 4)
-      export_data[[paste0("gage_", gage_suffix, "_drainage_area_ratio")]] <- round(da_ratio, 4)
-      export_data[[paste0("gage_", gage_suffix, "_adjusted_flow_cfs")]] <- round(final_flow, 4)
-    }
-
-    # Remove any rows with all NA values (except date)
-    export_data <- export_data[rowSums(is.na(export_data[, -1])) < (ncol(export_data) - 1), ]
-
-    # Write the CSV
-    write.csv(export_data, file, row.names = FALSE)
-
-    showNotification(
-      paste("Detailed flow data for", length(gages), "gage(s) downloaded successfully"),
-      type = "message"
     )
-  }
-)
-  })
-}
+  })}
 
 
 
