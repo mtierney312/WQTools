@@ -840,9 +840,6 @@ if(length(results) == 0) {
       if("TADA.ResultMeasureValue" %in% names(ecoli_with_flow)) {
         ecoli_with_flow <- ecoli_with_flow %>%
           mutate(ecoli_value = as.numeric(TADA.ResultMeasureValue))
-      } else if("ecoli_value" %in% names(ecoli_with_flow)) {
-        ecoli_with_flow <- ecoli_with_flow %>%
-          mutate(ecoli_value = as.numeric(ecoli_value))
       } else {
         showNotification("Cannot find E. coli value column", type = "error")
         return(NULL)
