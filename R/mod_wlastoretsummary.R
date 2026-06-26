@@ -98,7 +98,6 @@ mod_wlastoretsummary_server <- function(id,cleaned_storet_data=NULL){
       # Filter out phosphorus data prior to 2002
       df <- df %>%
         filter(!(grepl("phosphorus|phosphate", CharacteristicName, ignore.case = TRUE) & Year < 2002))
-
       df
     })
 
@@ -205,7 +204,11 @@ mod_wlastoretsummary_server <- function(id,cleaned_storet_data=NULL){
         filter(!is.na(TADA.ResultMeasureValue)) %>%
         group_by(CharacteristicName, Month) %>%
         summarise(
-          MeanValue = mean(TADA.ResultMeasureValue, na.rm = TRUE),
+          MeanValue = if(grepl('pH',first(CharacteristicName),ignore.case = TRUE)){
+            -log10(mean(10^(-TADA.ResultMeasureValue)))
+          }else{
+            mean(TADA.ResultMeasureValue)
+          },
           YearsOfData = n_distinct(Year),
           .groups = 'drop'
         ) %>%
