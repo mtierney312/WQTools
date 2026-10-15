@@ -761,13 +761,6 @@ if(length(results) == 0) {
         'Dry Conditions' = 'darkgoldenrod1',
         'Low Flows' = 'red3'
       )
-
-      cat_labels <- data.frame(
-        x = c(5, 25, 50, 75, 95),
-        label = c("High Flows", "Moist Conditions", "Mid-Range Flows",
-                  "Dry Conditions", "Low Flows")
-      )
-
       p <- ggplot(flow_data, aes(x = exceed_p, y = flow_site_cfs, color = hydro_cat)) +
         geom_line(
           data = flow_data,
@@ -782,15 +775,7 @@ if(length(results) == 0) {
           linetype = "solid",
           color = "dodgerblue",
           linewidth = 0.6
-        ) +
-        annotate(
-          "text",
-          y = min(flow_data$flow_site_cfs),
-          x = cat_labels$x,
-          size = 5,
-          hjust = 0.5,
-          label = cat_labels$label
-        ) +
+        )+
         scale_y_log10(labels = scales::comma) +
         scale_x_continuous(
           breaks = seq(0, 100, 10),
@@ -933,13 +918,6 @@ if(length(results) == 0) {
         'Dry Conditions' = 'darkgoldenrod1',
         'Low Flows' = 'red3'
       )
-
-      cat_labels <- data.frame(
-        x = c(5, 25, 50, 75, 95),
-        label = c("High Flows", "Moist Conditions", "Mid-Range Flows",
-                  "Dry Conditions", "Low Flows")
-      )
-
       # Define category boundaries
       cat_boundaries <- data.frame(
         hydro_cat = c("High Flows", "Moist Conditions", "Mid-Range Flows",
@@ -1000,15 +978,6 @@ if(length(results) == 0) {
           linetype = "solid",
           color = "dodgerblue",
           linewidth = 0.6
-        ) +
-        # Category labels at bottom
-        annotate(
-          "text",
-          x = cat_labels$x,
-          y = rep(y_min * 1.2, 5),
-          label = cat_labels$label,
-          size = 5,
-          hjust = 0.5
         ) +
         scale_y_log10(
           labels = scales::scientific,
