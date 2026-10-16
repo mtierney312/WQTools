@@ -762,13 +762,6 @@ if(length(results) == 0) {
         'Low Flows' = 'red3'
       )
       p <- ggplot(flow_data, aes(x = exceed_p, y = flow_site_cfs, color = hydro_cat)) +
-        geom_line(
-          data = flow_data,
-          aes(x = exceed_p, y = mean_daily_flow_cfs),
-          color = "grey50",
-          linewidth = 0.8,
-          linetype = "dashed"
-        ) +
         geom_line(linewidth = 1) +
         geom_vline(
           xintercept = c(10, 40, 60, 90),
