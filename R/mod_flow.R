@@ -874,15 +874,16 @@ if(length(results) == 0) {
         filter(!is.na(existing_load)) %>%
         mutate(
           target_load = WQ_TARGET * mid_flow_cfs * CONV_FACTOR,
+          tmdl_load = input$wq_target*mid_flow_cfs*CONV_FACTOR,
           load_reduction = existing_load - target_load,
-          pct_reduction = round((existing_load - target_load) / existing_load * 100, 1),
+          pct_reduction = round(load_reduction / existing_load * 100, 1),
           pct_reduction = ifelse(pct_reduction < 0, 0, pct_reduction),
           meets_standard = ifelse(pct_reduction == 0, "No Reduction Needed",
                                   paste0(pct_reduction, "%")),
           MOS=mid_flow_cfs*(input$wq_target*(input$mos_percent/100))*CONV_FACTOR,
         ) %>%
         select(hydro_cat, exceed_p, mid_flow_cfs, p90_conc,
-               existing_load, MOS, target_load, load_reduction, pct_reduction, meets_standard)
+               existing_load, MOS, target_load, load_reduction, pct_reduction, meets_standard,tmdl_load)
 
       list(
         target_curve = target_curve,
@@ -1026,6 +1027,7 @@ if(length(results) == 0) {
           mid_flow_cfs = round(mid_flow_cfs, 2),
           p90_conc = round(p90_conc, 1),
           existing_load = scales::scientific(existing_load, digits = 3),
+          tmdl_load=scales::scientific(tmdl_load,digits=3),
           MOS=scales::scientific(MOS,digits=3),
           target_load = scales::scientific(target_load, digits = 3),
           load_reduction = scales::scientific(load_reduction, digits = 3)
@@ -1037,8 +1039,9 @@ if(length(results) == 0) {
           `Midpoint Flow (cfs)` = mid_flow_cfs,
           `90th %ile E. coli` = p90_conc,
           `Existing Load (#/day)` = existing_load,
+          'TMDL Load (#/day)'=tmdl_load,
           'Margin of Safety (#/day)'=MOS,
-          `Target Load (#/day)` = target_load,
+          `Load Allocation (#/day)` = target_load,
           `Load Reduction (#/day)` = load_reduction,
           `% Reduction Needed` = pct_reduction,
           `Status` = meets_standard
