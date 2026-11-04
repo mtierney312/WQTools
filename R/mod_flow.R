@@ -883,7 +883,7 @@ if(length(results) == 0) {
           MOS=mid_flow_cfs*(input$wq_target*(input$mos_percent/100))*CONV_FACTOR,
         ) %>%
         select(hydro_cat, exceed_p, mid_flow_cfs, p90_conc,
-               existing_load, MOS, target_load, load_reduction, pct_reduction, meets_standard,tmdl_load)
+               existing_load, MOS, target_load,tmdl_load, load_reduction, pct_reduction, meets_standard)
 
       list(
         target_curve = target_curve,
